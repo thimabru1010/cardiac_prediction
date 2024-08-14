@@ -12,46 +12,40 @@ import dicom2nifti
 
 if __name__ == '__main__':
     #TODO: Aplicar a segmentação em cada um dos niftis
-    input_path = 'data/EXAMES_ESCORE_CALCIO_MEDISCAN-20240708T230718Z-001/EXAMES_ESCORE_CALCIO_MEDISCAN/Exames_Separados/61113/Nifti/61113_0/5_partes_moles__10.nii.gz'
-    output_path = 'data/EXAMES_ESCORE_CALCIO_MEDISCAN-20240708T230718Z-001/EXAMES_ESCORE_CALCIO_MEDISCAN/Exames_Separados/61113/Nifti/61113_0'
-    # input_img = nib.load(input_path)#.get_fdata()
-    # print(input_img.shape)
-    #for i in range(input_img.shape[2]):
-    # output_img = totalsegmentator(input_img.slicer[:, :, i:i+1], ml=False, task='total')
-    # os.system(f'TotalSegmentator -i {input_path} -o {os.path.join(output_path, "segs2", "segmentations_test.nii.gz")} -t total --ml')
-    # print(output_img.shape)
-    # print(output_img.get_fdata().shape)
-    # nib.save(output_img, os.path.join(output_path, 'segs2', f'seg_{i}.nii.gz'))
-    # totalsegmentator(input_path, os.path.join(output_path, 'segmentations_test'), ml=True, task='total')
+    input_path = 'data/EXAMES/Exames_Separados/ALL/61113_0_5_partes_moles__10.nii.gz'
+    # input_path = 'data/EXAMES_ESCORE_CALCIO_MEDISCAN-20240708T230718Z-001/EXAMES_ESCORE_CALCIO_MEDISCAN/Exames_Separados/61113/Nifti/61113_0/2_cardiac_30.nii.gz'
+    output_path = 'data/EXAMES/Exames_Separados/ALL_TotalSeg'
     
-    # image_path = os.path.join(output_path, 'total.nii.gz')
-    # segmentation_nifti_img, label_map_dict = load_multilabel_nifti(image_path)
-    # print(segmentation_nifti_img.shape)
-    # print(label_map_dict)
+    # input_path = 'data/EXAMES_ESCORE_CALCIO_MEDISCAN-20240708T230718Z-001/EXAMES_ESCORE_CALCIO_MEDISCAN/Exames_Separados/122932/Nifti/122932_0/3_escore_de_calcio.nii.gz'
+    # output_path = 'data/EXAMES_ESCORE_CALCIO_MEDISCAN-20240708T230718Z-001/EXAMES_ESCORE_CALCIO_MEDISCAN/Exames_Separados/122932/Nifti/122932_0'
     
-    segmentations = nib.load(os.path.join(output_path, "segs2", "segmentations_test.nii.gz"))
-    
-    # Access the full data array
-    segmentation_data = segmentations.get_fdata()
+    input_img = nib.load(input_path)#.get_fdata()
+    # os.system(f'TotalSegmentator -i {input_path} -o {os.path.join(output_path, "segs3")} -t coronary_arteries')
 
-    print(segmentation_data.shape)
-    print(segmentations.shape)
+    output_img = totalsegmentator(input_img, task='total')
+    # output_img = nib.load(f'{output_path}/cardio_segs.nii.gz')
     
+    print('-'*50)
+    output_data = output_img.get_fdata()
+    print(output_data.shape)
     # Find all unique classes (labels) in the segmentation
-    unique_labels = np.unique(segmentation_data)
+    unique_labels = np.unique(output_data)
     print("Unique labels in the segmentation:", unique_labels)
     
-    # Example: Extract and view only the label '1' across all slices
-    label_1_data = np.where(segmentation_data == 1, 1, 0)
-    print("Shape of the extracted label '1' data:", label_1_data.shape)
-
-    # If you want to visualize this, you can use matplotlib
-    plt.imshow(label_1_data[:, :, 50], cmap='gray')  # Display the 51st slice
-    plt.show()
+    cardio_ids = list(range(51, 68))
     
-    # Create a new NIfTI image from the modified data
-    new_img = nib.Nifti1Image(label_1_data, segmentations.affine)
+    print(cardio_ids)
+    
+    # select only cardio classes
+    cardio_data = np.zeros(output_data.shape)
+    for i in cardio_ids:
+        cardio_data[output_data == i] = i
+    
+    # segmentations = nib.load(os.path.join(output_path, "segs2", "segmentations_test.nii.gz"))
+    
+    # # Create a new NIfTI image from the modified data
+    new_nifti = nib.Nifti1Image(cardio_data, output_img.affine)
 
     # Save the new NIfTI image
-    nib.save(new_img, 'path_to_save/new_segmentation.nii.gz')
+    nib.save(new_nifti, f'{output_path}/cardio_segs.nii.gz')
 
