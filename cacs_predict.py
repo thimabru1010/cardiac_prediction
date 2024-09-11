@@ -14,6 +14,7 @@ from glob import glob
 import SimpleITK as sitk
 import numpy as np
 import pathlib
+import nibabel as nib
 
 def main(args):
     
@@ -33,18 +34,31 @@ def main(args):
     # Load pretrained model parameter
     print('Loading model: ' + model_dir)
     model.load(model_dir)
+    
+    # model.eval()
 
     # Load image files from data folder    
-    files = glob(data_dir + '/*.nii.gz')
-    print(files)
-    for file in files:
-        
+    # files = glob(data_dir + '/*.nii.gz')
+    pacients = os.listdir(data_dir)
+    for pacient in pacients:
+        print('Processing pacient: ' + pacient)
+        # files = os.listdir(os.path.join(data_dir, pacient, pacient))
+        # files.remove('partes_moles_HeartSegs.nii.gz')
+        # files.remove('partes_moles_FakeGated.nii.gz')
+        # for file in files:
         
         # Read image
-        filename = os.path.splitext(os.path.basename(file))[0]
-        print('Loading CT: ' + os.path.basename(file))
-        image_sitk = sitk.ReadImage(file)
-        image = sitk.GetArrayFromImage(image_sitk)
+        # filename = os.path.splitext(os.path.basename(file))[0]
+        # filename = [file for file in files if 'partes_moles' in file][0]
+        # print('Loading CT: ' + os.path.basename(filename))
+        basename = 'partes_moles_FakeGated.nii.gz'
+        filename = os.path.splitext(basename)[0]
+        image_nifti = nib.load(os.path.join(data_dir, pacient, pacient, basename))
+        # image_sitk = sitk.ReadImage(file)
+        # image = sitk.GetArrayFromImage(image_sitk)
+        image = image_nifti.get_fdata()
+        image = np.transpose(image, (2, 1, 0))
+        print(image.shape)
 
         # Normalize image data
         Xmin = -2000
@@ -61,7 +75,7 @@ def main(args):
         pred_lesion_multi = np.zeros(image.shape)
         pred_region = np.zeros(image.shape)
         
-        print('Predicting CT: ' + os.path.basename(file))
+        # print('Predicting CT: ' + os.path.basename(file))
         # Iterate over slices
         for s in range(image.shape[0]):
 
@@ -94,23 +108,38 @@ def main(args):
             # print(pred_lesion_multi[s,:,:])
             # print(np.unique(pred_lesion_multi[s,:,:]))
             
-        print('Saveing predictions from: ' + os.path.basename(file))
+        # print('Saveing predictions from: ' + os.path.basename(file))
         # Save predictions
-        filepath = os.path.join(prediction_dir, filename + '_binary_lesion.nrrd')
-        Y_lesion_bin_sitk = sitk.GetImageFromArray(pred_lesion)
-        Y_lesion_bin_sitk.CopyInformation(image_sitk)
-        sitk.WriteImage(Y_lesion_bin_sitk, filepath, True)
+        # filepath = os.path.join(prediction_dir, filename + '_binary_lesion.nrrd')
+        prediction_path = os.path.join(prediction_dir, pacient, pacient)
+        filepath = os.path.join(prediction_path, filename + '_binary_lesion.nii.gz')
+        
+        # Save predictions as nifti
+        new_nifti = nib.Nifti1Image(pred_lesion, image_nifti.affine)
+        nib.save(new_nifti, filepath)
+        
+        # Y_lesion_bin_sitk = sitk.GetImageFromArray(pred_lesion)
+        # Y_lesion_bin_sitk.CopyInformation(image_sitk)
+        # sitk.WriteImage(Y_lesion_bin_sitk, filepath, True)
 
         # Save predictions
-        filepath = os.path.join(prediction_dir, filename + '_multi_label.nrrd')
-        Y_region_sitk = sitk.GetImageFromArray(pred_region)
-        Y_region_sitk.CopyInformation(image_sitk)
-        sitk.WriteImage(Y_region_sitk, filepath, True)
+        # filepath = os.path.join(prediction_dir, filename + '_multi_label.nrrd')
+        filepath = os.path.join(prediction_path, filename + '_multi_label.nii.gz')
         
-        filepath = os.path.join(prediction_dir, filename + '_multi_lesion.nrrd')
-        Y_lesion_multi_sitk = sitk.GetImageFromArray(pred_lesion_multi)
-        Y_lesion_multi_sitk.CopyInformation(image_sitk)
-        sitk.WriteImage(Y_lesion_multi_sitk, filepath, True)
+        new_nifti = nib.Nifti1Image(pred_lesion_multi, image_nifti.affine)
+        nib.save(new_nifti, filepath)
+        # Y_region_sitk = sitk.GetImageFromArray(pred_region)
+        # Y_region_sitk.CopyInformation(image_sitk)
+        # sitk.WriteImage(Y_region_sitk, filepath, True)
+        
+        # filepath = os.path.join(prediction_dir, filename + '_multi_lesion.nrrd')
+        filepath = os.path.join(prediction_path, filename + '_multi_lesion.nii.gz')
+        
+        new_nifti = nib.Nifti1Image(pred_lesion_multi, image_nifti.affine)
+        nib.save(new_nifti, filepath)
+        # Y_lesion_multi_sitk = sitk.GetImageFromArray(pred_lesion_multi)
+        # Y_lesion_multi_sitk.CopyInformation(image_sitk)
+        # sitk.WriteImage(Y_lesion_multi_sitk, filepath, True)
         
     print('--- Finished processing ---')
         

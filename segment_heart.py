@@ -9,43 +9,47 @@ import cv2
 from tqdm import tqdm
 import argparse
 import dicom2nifti
+import json
 
 if __name__ == '__main__':
-    #TODO: Aplicar a segmentação em cada um dos niftis
-    input_path = 'data/EXAMES/Exames_Separados/ALL/61113_0_5_partes_moles__10.nii.gz'
-    # input_path = 'data/EXAMES_ESCORE_CALCIO_MEDISCAN-20240708T230718Z-001/EXAMES_ESCORE_CALCIO_MEDISCAN/Exames_Separados/61113/Nifti/61113_0/2_cardiac_30.nii.gz'
-    output_path = 'data/EXAMES/Exames_Separados/ALL_TotalSeg'
+    root_path = 'data/EXAMES/Exames_NIFTI'
+    pacients = os.listdir(root_path)
     
-    # input_path = 'data/EXAMES_ESCORE_CALCIO_MEDISCAN-20240708T230718Z-001/EXAMES_ESCORE_CALCIO_MEDISCAN/Exames_Separados/122932/Nifti/122932_0/3_escore_de_calcio.nii.gz'
-    # output_path = 'data/EXAMES_ESCORE_CALCIO_MEDISCAN-20240708T230718Z-001/EXAMES_ESCORE_CALCIO_MEDISCAN/Exames_Separados/122932/Nifti/122932_0'
-    
-    input_img = nib.load(input_path)#.get_fdata()
-    # os.system(f'TotalSegmentator -i {input_path} -o {os.path.join(output_path, "segs3")} -t coronary_arteries')
+    # Load json file with the TotalSeg classes
+    json_path = 'TotalSeg_classes.json'
+    # Load the JSON file
+    with open(json_path, 'r') as file:
+        totalseg_classes = json.load(file)
 
-    output_img = totalsegmentator(input_img, task='total')
-    # output_img = nib.load(f'{output_path}/cardio_segs.nii.gz')
-    
-    print('-'*50)
-    output_data = output_img.get_fdata()
-    print(output_data.shape)
-    # Find all unique classes (labels) in the segmentation
-    unique_labels = np.unique(output_data)
-    print("Unique labels in the segmentation:", unique_labels)
+    # Print the loaded TotalSeg classes
+    # print(totalseg_classes)
     
     cardio_ids = list(range(51, 68))
     
-    print(cardio_ids)
+    cardio_classes = [totalseg_classes[str(id)] for id in cardio_ids]
     
-    # select only cardio classes
-    cardio_data = np.zeros(output_data.shape)
-    for i in cardio_ids:
-        cardio_data[output_data == i] = i
-    
-    # segmentations = nib.load(os.path.join(output_path, "segs2", "segmentations_test.nii.gz"))
-    
-    # # Create a new NIfTI image from the modified data
-    new_nifti = nib.Nifti1Image(cardio_data, output_img.affine)
+    for pacient in tqdm(pacients):
+        pacient_path = os.path.join(root_path, pacient, pacient)
+        nifti_files = os.listdir(pacient_path)
+        
+        # gated_filename = [file for file in nifti_files if 'cardiac' in file][0]
+        try:
+            motion_filename = [file for file in nifti_files if 'partes_moles_body' in file][0]
+        except:
+            print(f'partes_moles_body not found!: {pacient}')
+            break
+        
+        # infer exams
+        # output_path = os.path.join('data/EXAMES/Exames_NIFTI_HeartSegs', pacient, pacient)
+        output_path = os.path.join('data/EXAMES/Exames_NIFTI', pacient, pacient)
+        os.makedirs(output_path, exist_ok=True)
+        
+        #for filename in [gated_filename, motion_filename]:
+        input_img = nib.load(os.path.join(pacient_path, motion_filename))
+        output_img = totalsegmentator(input_img, task='total', roi_subset=cardio_classes)
+        
+        nib.save(output_img, f'{output_path}/partes_moles_HeartSegs.nii.gz')
+        print('Saved:', f'{output_path}/partes_moles_HeartSegs.nii.gz')
 
-    # Save the new NIfTI image
-    nib.save(new_nifti, f'{output_path}/cardio_segs.nii.gz')
+    print('Segmentation finished!')
 

@@ -155,28 +155,20 @@ def separate_patient_exams(root_path, output_path):
             nib.save(img, os.path.join(output_exam_folder_nifti, f'{patient}_{i}.nii.gz'))
     
 if __name__ == '__main__':
-    root_path = 'data/EXAMES/Exames_Todos/Controls/P_000801-20240716T151737Z-001/P_000801/unnamed/unnamed_0/series_102'
-    output_path = 'data/EXAMES/Exames_Separados/Controls'
+    root_path = 'data/EXAMES/Exames_DICOM'
+    # output_path = 'data/EXAMES/Exames_Separados/11517/11517'
     
-    # separate_patient_exams(root_path, output_path)
-    
-    # # Check shape of nifti files
-    # # output_nifti_path = os.path.join(output_path, 'Nifti')
-    # patients = os.listdir(output_path)
-    # for patient in patients:
-    #     patient_path = os.path.join(output_path, patient, 'Nifti')
-    #     exams = os.listdir(patient_path)
-    #     for exam in exams:
-    #         exam_path = os.path.join(patient_path, exam)
-    #         nifti_files = os.listdir(exam_path)
-    #         for nifti_file in nifti_files:
-    #             nifti_path = os.path.join(exam_path, nifti_file)
-    #             if nifti_file.endswith('.nii.gz'):
-    #                 img = nib.load(nifti_path)
-    #                 print(nifti_path)
-    #                 print(img.shape)
-    
-    dicom2nifti.convert_directory(root_path, output_path)
+    pacients = os.listdir(root_path)
+    for pacient in tqdm(pacients):
+        pacient_path = os.path.join(root_path, pacient)
+        output_path = os.path.join('data/EXAMES/Exames_NIFTI', pacient, pacient)
+        os.makedirs(output_path, exist_ok=True)
+        pacient_path = os.path.join(root_path, pacient, pacient)
+        try:
+            dicom2nifti.convert_directory(pacient_path, output_path)
+        except Exception as e:
+                print(f'Error in {pacient}')
+                print(e)
     print('finished')
     #TODO: Aplicar a segmentação em cada um dos niftis
     # input_path = '/home/thiago/IDOR/Health_Total_Body_Data/manifest-1690389403229/Healthy-Total-Body-CTs/Healthy-Total-Body-CTs-007/03-17-2001-NA-CTSoft512x512 90min-94809/nifti/205_ctsoft_512x512_90min.nii.gz'
