@@ -51,7 +51,8 @@ def main(args):
         # filename = os.path.splitext(os.path.basename(file))[0]
         # filename = [file for file in files if 'partes_moles' in file][0]
         # print('Loading CT: ' + os.path.basename(filename))
-        basename = 'partes_moles_FakeGated.nii.gz'
+        # basename = 'partes_moles_FakeGated.nii.gz'
+        basename = [file for file in os.listdir(os.path.join(data_dir, pacient, pacient)) if 'cardiac' in file][0]
         filename = os.path.splitext(basename)[0]
         image_nifti = nib.load(os.path.join(data_dir, pacient, pacient, basename))
         # image_sitk = sitk.ReadImage(file)
