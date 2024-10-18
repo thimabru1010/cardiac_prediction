@@ -1,0 +1,16 @@
+artifact_uri: file:///home/thiago/IDOR/CoracaoMotionBlur/cardiac_prediction/mlruns/154148316223194319/3a41c491013644da83421996fd5abab9/artifacts
+deleted_time: 1729003809614
+end_time: 1728918442298
+entry_point_name: ''
+experiment_id: '154148316223194319'
+lifecycle_stage: deleted
+run_id: 3a41c491013644da83421996fd5abab9
+run_name: lyrical-deer-208
+run_uuid: 3a41c491013644da83421996fd5abab9
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1728918442284
+status: 3
+tags: []
+user_id: thiago

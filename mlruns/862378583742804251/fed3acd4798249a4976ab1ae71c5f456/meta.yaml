@@ -1,0 +1,16 @@
+artifact_uri: file:///home/thiago/IDOR/CoracaoMotionBlur/cardiac_prediction/mlruns/862378583742804251/fed3acd4798249a4976ab1ae71c5f456/artifacts
+deleted_time: 1729003809614
+end_time: 1728918441510
+entry_point_name: ''
+experiment_id: '862378583742804251'
+lifecycle_stage: deleted
+run_id: fed3acd4798249a4976ab1ae71c5f456
+run_name: marvelous-newt-711
+run_uuid: fed3acd4798249a4976ab1ae71c5f456
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1728918441496
+status: 3
+tags: []
+user_id: thiago

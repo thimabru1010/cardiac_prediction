@@ -1,0 +1,16 @@
+artifact_uri: file:///home/thiago/IDOR/CoracaoMotionBlur/cardiac_prediction/mlruns/347622634352621588/3a5cfb3b06e94e2f981acdf35afbb9b5/artifacts
+deleted_time: 1729003286368
+end_time: 1728918337914
+entry_point_name: ''
+experiment_id: '347622634352621588'
+lifecycle_stage: deleted
+run_id: 3a5cfb3b06e94e2f981acdf35afbb9b5
+run_name: big-swan-403
+run_uuid: 3a5cfb3b06e94e2f981acdf35afbb9b5
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1728918337901
+status: 3
+tags: []
+user_id: thiago

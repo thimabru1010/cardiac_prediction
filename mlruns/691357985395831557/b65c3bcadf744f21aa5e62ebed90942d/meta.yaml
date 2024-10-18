@@ -1,0 +1,16 @@
+artifact_uri: file:///home/thiago/IDOR/CoracaoMotionBlur/cardiac_prediction/mlruns/691357985395831557/b65c3bcadf744f21aa5e62ebed90942d/artifacts
+deleted_time: 1729003809614
+end_time: 1728918439118
+entry_point_name: ''
+experiment_id: '691357985395831557'
+lifecycle_stage: deleted
+run_id: b65c3bcadf744f21aa5e62ebed90942d
+run_name: mercurial-squid-380
+run_uuid: b65c3bcadf744f21aa5e62ebed90942d
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1728918439106
+status: 3
+tags: []
+user_id: thiago

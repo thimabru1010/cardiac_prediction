@@ -1,0 +1,16 @@
+artifact_uri: file:///home/thiago/IDOR/CoracaoMotionBlur/cardiac_prediction/mlruns/470455392072567486/0028fdb0e46e48528da9caeaa6392a7a/artifacts
+deleted_time: 1729003809617
+end_time: 1728918446324
+entry_point_name: ''
+experiment_id: '470455392072567486'
+lifecycle_stage: deleted
+run_id: 0028fdb0e46e48528da9caeaa6392a7a
+run_name: secretive-sloth-103
+run_uuid: 0028fdb0e46e48528da9caeaa6392a7a
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1728918446310
+status: 3
+tags: []
+user_id: thiago

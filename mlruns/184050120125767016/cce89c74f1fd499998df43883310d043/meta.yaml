@@ -1,0 +1,16 @@
+artifact_uri: file:///home/thiago/IDOR/CoracaoMotionBlur/cardiac_prediction/mlruns/184050120125767016/cce89c74f1fd499998df43883310d043/artifacts
+deleted_time: 1729003809602
+end_time: 1728918447128
+entry_point_name: ''
+experiment_id: '184050120125767016'
+lifecycle_stage: deleted
+run_id: cce89c74f1fd499998df43883310d043
+run_name: ambitious-sheep-543
+run_uuid: cce89c74f1fd499998df43883310d043
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1728918447112
+status: 3
+tags: []
+user_id: thiago

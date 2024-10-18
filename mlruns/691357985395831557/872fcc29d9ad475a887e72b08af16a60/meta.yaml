@@ -1,0 +1,16 @@
+artifact_uri: file:///home/thiago/IDOR/CoracaoMotionBlur/cardiac_prediction/mlruns/691357985395831557/872fcc29d9ad475a887e72b08af16a60/artifacts
+deleted_time: 1729004322135
+end_time: 1729003959638
+entry_point_name: ''
+experiment_id: '691357985395831557'
+lifecycle_stage: deleted
+run_id: 872fcc29d9ad475a887e72b08af16a60
+run_name: No Dilation
+run_uuid: 872fcc29d9ad475a887e72b08af16a60
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1729003959625
+status: 3
+tags: []
+user_id: thiago

@@ -1,0 +1,16 @@
+artifact_uri: file:///home/thiago/IDOR/CoracaoMotionBlur/cardiac_prediction/mlruns/782121685619331312/d718b7789ed941e9a17ae0779f8d2ecd/artifacts
+deleted_time: 1729003904320
+end_time: 1729003843851
+entry_point_name: ''
+experiment_id: '782121685619331312'
+lifecycle_stage: deleted
+run_id: d718b7789ed941e9a17ae0779f8d2ecd
+run_name: dilated it=5 k=7
+run_uuid: d718b7789ed941e9a17ae0779f8d2ecd
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1729003843830
+status: 3
+tags: []
+user_id: thiago

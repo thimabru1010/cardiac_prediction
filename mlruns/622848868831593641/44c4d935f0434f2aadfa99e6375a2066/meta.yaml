@@ -1,0 +1,16 @@
+artifact_uri: file:///home/thiago/IDOR/CoracaoMotionBlur/cardiac_prediction/mlruns/622848868831593641/44c4d935f0434f2aadfa99e6375a2066/artifacts
+deleted_time: 1729003291086
+end_time: 1728918337132
+entry_point_name: ''
+experiment_id: '622848868831593641'
+lifecycle_stage: deleted
+run_id: 44c4d935f0434f2aadfa99e6375a2066
+run_name: glamorous-moth-498
+run_uuid: 44c4d935f0434f2aadfa99e6375a2066
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1728918337117
+status: 3
+tags: []
+user_id: thiago

@@ -1,0 +1,16 @@
+artifact_uri: file:///home/thiago/IDOR/CoracaoMotionBlur/cardiac_prediction/mlruns/542246854496680297/d755390eba93435699cc74a721e5abe2/artifacts
+deleted_time: 1729003809613
+end_time: 1728918443946
+entry_point_name: ''
+experiment_id: '542246854496680297'
+lifecycle_stage: deleted
+run_id: d755390eba93435699cc74a721e5abe2
+run_name: masked-snake-185
+run_uuid: d755390eba93435699cc74a721e5abe2
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1728918443931
+status: 3
+tags: []
+user_id: thiago

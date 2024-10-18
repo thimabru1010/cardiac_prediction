@@ -3,6 +3,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import confusion_matrix, accuracy_score, f1_score, classification_report
+import argparse
+import mlflow
+import os
 
 def classify(x):
     if x >= 0 and x < 100:
@@ -14,92 +17,136 @@ def classify(x):
     elif x >= 400:
         # return 'alto_risco'
         return 2
+
+def get_integers_from_string(s, key):
+    integers = s.split(key)[1][:2]
+    try:
+        integers = int(integers)
+    except ValueError:
+        integers = int(integers[0])
+    return integers
+                
+if __name__ == '__main__':
+    argparser = argparse.ArgumentParser(description='Classify the calcium scores')
+    argparser.add_argument('--scores_path', type=str, default='data/EXAMES/Calcium_Scores_Estimations/calcium_score_estimations.csv', help='CSV filepath with the calcium scores')
+    argparser.add_argument('--folder_path', type=str, default='data/EXAMES/Calcium_Scores_Estimations/', help='Folder path to load csv files')
+    # argparser.add_argument('--save_path', type=str, help='Path to save the results')
+    args = argparser.parse_args()
     
-scores_path = 'data/EXAMES/calcium_score_estimations.csv'
+    files = os.listdir(args.folder_path)
+    for filename in files:
+        print(filename)
+        # scores_path = args.scores_path
+        scores_path = os.path.join(args.folder_path, filename)
+        
+        dilate_it = None
+        dilate_k = None
+        exp_name = "Experiment No Dilation"
+        run_name = "No Dilation"
+        if 'dilate' in scores_path:
+            # dilate_it = scores_path.split('dilate_it=')[1][:2]
+            # try:
+            #     dilate_it = int(dilate_it)
+            # except ValueError:
+            #     dilate_it = int(dilate_it[0])
+            dilate_it = get_integers_from_string(scores_path, 'dilate_it=')
+            dilate_k = get_integers_from_string(scores_path, 'dilate_k=')
+            print(dilate_it, dilate_k)
+                
+                
+            # dilate_k = scores_path.split('dilate_k=')[1][:2]
+            # numbers = re.findall(r'\d{1,2}', scores_path)
+            exp_name = f"Experiment dilated it={dilate_it} k={dilate_k}"
+            run_name = f"dilated it={dilate_it} k={dilate_k}"
+            
+        mlflow.set_experiment(exp_name)
+        df = pd.read_csv(scores_path)
+        df.columns = df.columns.str.strip()
+        
+        print(df['Escore'].head())
+        df['Label'] = df['Escore'].apply(lambda x: classify(x))
+        df['ROI Gated Clssf'] = df['ROI Gated'].apply(lambda x: classify(x))
+        df['Lesion Gated Clssf'] = df['Lesion Gated'].apply(lambda x: classify(x))
+        df['Circle Gated Clssf'] = df['Circle Mask Gated'].apply(lambda x: classify(x))
+        # df['Estimated Fake Gated Clssf'] = df['Estimated Score Fake Gated'].apply(lambda x: classify(x))
+        # df['Lesion Fake Gated Clssf'] = df['Lesion Fake Gated'].apply(lambda x: classify(x))
+        
+        # Count the number of samples in each class
+        print(df['Label'].value_counts())
+        # 1/0
 
-df = pd.read_csv(scores_path)
+        acc_roi_gated = (df['Label'] == df['ROI Gated Clssf']).sum() / len(df) *100
+        acc_lesion_gated = (df['Label'] == df['Lesion Gated Clssf']).sum() / len(df) *100
+        acc_circle_gated = (df['Label'] == df['Circle Gated Clssf']).sum() / len(df) *100
+        # accuracy_efg = (df['Label'] == df['Estimated Fake Gated Clssf']).sum() / len(df) *100
+        # accuracy_dfg = (df['Label'] == df['Direct Fake Gated Clssf']).sum() / len(df) *100
 
-df['Label'] = df['Escore'].apply(lambda x: classify(x))
-df['ROI Gated Clssf'] = df['ROI Gated'].apply(lambda x: classify(x))
-df['Lesion Gated Clssf'] = df['Lesion Gated'].apply(lambda x: classify(x))
-df['Circle Gated Clssf'] = df['Circle Mask Gated'].apply(lambda x: classify(x))
-# df['Estimated Fake Gated Clssf'] = df['Estimated Score Fake Gated'].apply(lambda x: classify(x))
-# df['Lesion Fake Gated Clssf'] = df['Lesion Fake Gated'].apply(lambda x: classify(x))
+        print(f'Accuracy ROI Gated: {acc_roi_gated}%')
+        # print(f'Accuracy Estimated Fake Gated: {accuracy_efg}%')
+        # print(f'Accuracy Direct Fake Gated: {accuracy_dfg}%')
+        print(f'Accuracy Lesion Gated: {acc_lesion_gated}%')
+        print(f'Accuracy Circle Mask Gated: {acc_circle_gated}%')
 
-acc_roi_gated = (df['Label'] == df['ROI Gated Clssf']).sum() / len(df) *100
-acc_lesion_gated = (df['Label'] == df['Lesion Gated Clssf']).sum() / len(df) *100
-acc_circle_gated = (df['Label'] == df['Circle Gated Clssf']).sum() / len(df) *100
-# accuracy_efg = (df['Label'] == df['Estimated Fake Gated Clssf']).sum() / len(df) *100
-# accuracy_dfg = (df['Label'] == df['Direct Fake Gated Clssf']).sum() / len(df) *100
+        f1_score_roi_gated = f1_score(df['Label'].values, df['ROI Gated Clssf'].values, average='weighted')
+        f1_score_lesion_gated = f1_score(df['Label'].values, df['Lesion Gated Clssf'].values, average='weighted')
+        
+        #! Confusion Matrices
+        # Define class names
+        class_names = ['sem_risco', 'risco_intermediario', 'alto_risco']
 
-print(f'Accuracy ROI Gated: {acc_roi_gated}%')
-# print(f'Accuracy Estimated Fake Gated: {accuracy_efg}%')
-# print(f'Accuracy Direct Fake Gated: {accuracy_dfg}%')
-print(f'Accuracy Lesion Gated: {acc_lesion_gated}%')
-print(f'Accuracy Circle Mask Gated: {acc_circle_gated}%')
+        # Compute confusion matrix for ROI Gated
+        cm = confusion_matrix(df['Label'].values, df['ROI Gated Clssf'].values, normalize='true')
+        cm_df = pd.DataFrame(cm, index=class_names, columns=class_names)
+        # Plot the confusion matrix
+        figure = plt.figure(figsize=(9,6))
+        sns.heatmap(cm_df, annot=True, cmap='Blues')
+        plt.title('ROI Gated Confusion Matrix')
+        plt.ylabel('Actual Class')
+        plt.xlabel('Predicted Class')
+        # plt.show()
+        if dilate_it is not None and dilate_k is not None:
+            roi_gated_cm_path = f'data/EXAMES/confusion_matrices/confusion_matrix_ROI_dilated_it={dilate_it}_k={dilate_k}.png'
+        else:
+            roi_gated_cm_path = 'data/EXAMES/confusion_matrices/confusion_matrix_ROI.png'
+        figure.savefig(roi_gated_cm_path, dpi=300)
+        plt.close()
 
-# Define class names
-class_names = ['sem_risco', 'risco_intermediario', 'alto_risco']
+        # Compute confusion matrix for Lesion Gated
+        cm = confusion_matrix(df['Label'].values, df['Lesion Gated Clssf'].values, normalize='true')
+        cm_df = pd.DataFrame(cm, index=class_names, columns=class_names)
+        # Plot the confusion matrix
+        figure = plt.figure(figsize=(9,6))
+        sns.heatmap(cm_df, annot=True, cmap='Blues')
+        plt.title('Lesion Gated Confusion Matrix')
+        plt.ylabel('Actual Class')
+        plt.xlabel('Predicted Class')
+        # plt.show()
+        if dilate_it is not None and dilate_k is not None:
+            lesion_gated_cm_path = f'data/EXAMES/confusion_matrices/confusion_matrix_Lesion_dilated_it={dilate_it}_k={dilate_k}.png'
+        else:
+            lesion_gated_cm_path = 'data/EXAMES/confusion_matrices/confusion_matrix_Lesion.png'
+        figure.savefig(lesion_gated_cm_path, dpi=300)
+        plt.close()
 
-# Compute confusion matrix
-cm = confusion_matrix(df['Label'].values, df['ROI Gated Clssf'].values, normalize='all')
+        with mlflow.start_run(run_name=run_name):
+            mlflow.log_metric("ROI Gated ACC", acc_roi_gated)
+            mlflow.log_metric("Lesion Gated ACC", acc_lesion_gated)
+            mlflow.log_metric("ROI Gated F1 Score", f1_score_roi_gated)
+            mlflow.log_metric("Lesion Gated F1 Score", f1_score_lesion_gated)
+            mlflow.log_artifact(roi_gated_cm_path)
+            mlflow.log_artifact(lesion_gated_cm_path)
+            
+        print('ROI Gated Clssf')
+        # Alternatively, print classification report
+        report = classification_report(df['Label'].values, df['ROI Gated Clssf'].values, target_names=class_names)
+        print('Classification Report:\n', report)
 
-cm_df = pd.DataFrame(cm, index=class_names, columns=class_names)
+        print('Lesion Gated Clssf')
+        # Alternatively, print classification report
+        report = classification_report(df['Label'].values, df['Lesion Gated Clssf'].values, target_names=class_names)
+        print('Classification Report:\n', report)
 
-# Plot the confusion matrix
-plt.figure(figsize=(6,4))
-sns.heatmap(cm_df, annot=True, cmap='Blues')
-
-plt.title('Confusion Matrix')
-plt.ylabel('Actual Class')
-plt.xlabel('Predicted Class')
-plt.show()
-
-print('ROI Gated Clssf')
-# Alternatively, print classification report
-report = classification_report(df['Label'].values, df['ROI Gated Clssf'].values, target_names=class_names)
-print('Classification Report:\n', report)
-
-print('Lesion Gated Clssf')
-# Alternatively, print classification report
-report = classification_report(df['Label'].values, df['Lesion Gated Clssf'].values, target_names=class_names)
-print('Classification Report:\n', report)
-
-print('Circle Gated Clssf')
-# Alternatively, print classification report
-report = classification_report(df['Label'].values, df['Circle Gated Clssf'].values, target_names=class_names)
-print('Classification Report:\n', report)
-
-# # Plot bar graph per class comparing with label
-# classes = ['sem_risco', 'risco_intermediario', 'alto_risco']
-# # Setting up the positions for the bars
-# bar_width = 0.2
-# index = np.arange(len(classes))
-
-# # Create the figure and axes
-# fig, ax = plt.subplots(figsize=(8,6))
-
-# # labels = df['Label'].value_counts()
-# # print(labels.values)
-# # 1/0
-# print(df['Label'].value_counts().values)
-# # print(df['Estimated Fake Gated Clssf'].value_counts())
-
-# # Bar plots for accuracy, precision, recall, and F1-score
-# ax.bar(index, df['Label'].value_counts().values, bar_width, label='Planilha')
-# ax.bar(index + bar_width, df['ROI Gated Clssf'].value_counts().values, bar_width, label='ROI Gated')
-# ax.bar(index + 2 * bar_width, df['Lesion Gated Clssf'].value_counts().values, bar_width, label='Lesion Gated')
-# # ax.bar(index + 2 * bar_width, df['Estimated Fake Gated Clssf'].value_counts().values, bar_width, label='Estimated Fake Gated')
-# # ax.bar(index + 3 * bar_width, f1_score, bar_width, label='F1 Score')
-
-# # Adding labels and title
-# ax.set_xlabel('Classes')
-# ax.set_ylabel('Counts')
-# ax.set_title('Comparison of Classification for 3 Classes')
-# ax.set_xticks(index + bar_width * 1.5)
-# ax.set_xticklabels(classes)
-# ax.legend()
-
-# # Display the plot
-# plt.tight_layout()
-# plt.show()
+    # print('Circle Gated Clssf')
+    # # Alternatively, print classification report
+    # report = classification_report(df['Label'].values, df['Circle Gated Clssf'].values, target_names=class_names)
+    # print('Classification Report:\n', report)

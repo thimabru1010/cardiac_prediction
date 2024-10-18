@@ -1,0 +1,16 @@
+artifact_uri: file:///home/thiago/IDOR/CoracaoMotionBlur/cardiac_prediction/mlruns/862378583742804251/2d3ac9894fe743f2ad85f574643da47a/artifacts
+deleted_time: 1729003264402
+end_time: 1728918341049
+entry_point_name: ''
+experiment_id: '862378583742804251'
+lifecycle_stage: deleted
+run_id: 2d3ac9894fe743f2ad85f574643da47a
+run_name: rumbling-ram-134
+run_uuid: 2d3ac9894fe743f2ad85f574643da47a
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1728918341035
+status: 3
+tags: []
+user_id: thiago

@@ -1,0 +1,16 @@
+artifact_uri: file:///home/thiago/IDOR/CoracaoMotionBlur/cardiac_prediction/mlruns/806508720915304197/bcef2eba88224525b6ee9a106bff6afa/artifacts
+deleted_time: 1729003268914
+end_time: 1728918340283
+entry_point_name: ''
+experiment_id: '806508720915304197'
+lifecycle_stage: deleted
+run_id: bcef2eba88224525b6ee9a106bff6afa
+run_name: kindly-fly-57
+run_uuid: bcef2eba88224525b6ee9a106bff6afa
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1728918340269
+status: 3
+tags: []
+user_id: thiago

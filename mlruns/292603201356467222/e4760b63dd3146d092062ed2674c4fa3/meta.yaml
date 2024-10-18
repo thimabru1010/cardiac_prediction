@@ -1,0 +1,16 @@
+artifact_uri: file:///home/thiago/IDOR/CoracaoMotionBlur/cardiac_prediction/mlruns/292603201356467222/e4760b63dd3146d092062ed2674c4fa3/artifacts
+deleted_time: 1729003809601
+end_time: 1728918443083
+entry_point_name: ''
+experiment_id: '292603201356467222'
+lifecycle_stage: deleted
+run_id: e4760b63dd3146d092062ed2674c4fa3
+run_name: adorable-kite-607
+run_uuid: e4760b63dd3146d092062ed2674c4fa3
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1728918443068
+status: 3
+tags: []
+user_id: thiago

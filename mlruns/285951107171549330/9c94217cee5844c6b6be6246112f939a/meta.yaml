@@ -1,0 +1,16 @@
+artifact_uri: file:///home/thiago/IDOR/CoracaoMotionBlur/cardiac_prediction/mlruns/285951107171549330/9c94217cee5844c6b6be6246112f939a/artifacts
+deleted_time: 1729003809601
+end_time: 1728918444747
+entry_point_name: ''
+experiment_id: '285951107171549330'
+lifecycle_stage: deleted
+run_id: 9c94217cee5844c6b6be6246112f939a
+run_name: abundant-snake-116
+run_uuid: 9c94217cee5844c6b6be6246112f939a
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1728918444730
+status: 3
+tags: []
+user_id: thiago

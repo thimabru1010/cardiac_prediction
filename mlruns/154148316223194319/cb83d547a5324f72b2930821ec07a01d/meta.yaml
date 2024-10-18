@@ -1,0 +1,16 @@
+artifact_uri: file:///home/thiago/IDOR/CoracaoMotionBlur/cardiac_prediction/mlruns/154148316223194319/cb83d547a5324f72b2930821ec07a01d/artifacts
+deleted_time: 1729003259167
+end_time: 1728918341831
+entry_point_name: ''
+experiment_id: '154148316223194319'
+lifecycle_stage: deleted
+run_id: cb83d547a5324f72b2930821ec07a01d
+run_name: mercurial-smelt-302
+run_uuid: cb83d547a5324f72b2930821ec07a01d
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1728918341818
+status: 3
+tags: []
+user_id: thiago
