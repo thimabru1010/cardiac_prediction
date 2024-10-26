@@ -61,7 +61,7 @@ if __name__=='__main__':
     # pacients = df['Pacient'].grou
     
     # Split the data
-    pacients_train, pacients_test, _, _= train_test_split(pacients, pacient_labels, test_size=0.25, stratify=pacient_labels)
+    pacients_train, pacients_test, _, _= train_test_split(pacients, pacient_labels, test_size=0.25, stratify=pacient_labels, random_state=42)
     print(len(pacients_train), len(pacients_test))
     
     # X_train = df[['Pacient']]
@@ -105,12 +105,27 @@ if __name__=='__main__':
             'metric': ['euclidean', 'manhattan']      # Distance metrics
         }
         # Initialize the KNN classifier
-        model = KNeighborsClassifier()
+        model = KNeighborsClassifier(verbose=1)
         #model = KNeighborsClassifier(n_neighbors=10, n_jobs=10, weights='distance', metric='euclidean')
     elif args.model == 'svm':
-        model = SVC(kernel='rbf', C=10.0)
+        param_grid = {
+            'C': [0.1, 1, 10, 100],                 # Regularization parameter
+            'kernel': ['linear', 'rbf', 'poly'],     # Different kernel types
+            'degree': [2, 3, 4],                     # Degree of the polynomial kernel (only for 'poly' kernel)
+            'gamma': ['scale', 'auto'],              # Kernel coefficient for 'rbf', 'poly', and 'sigmoid'
+        }
+        model = SVC(probability=True, random_state=42, verbose=True)
     elif args.model == 'rf':
-        model = RandomForestClassifier(n_estimators=100, max_depth=5, criterion='entropy', random_state=42, n_jobs=10)
+        param_grid = {
+            'n_estimators': [50, 100, 200],           # Number of trees in the forest
+            'max_depth': [10, 20, 30],          # Maximum depth of the tree; None means no limit
+            'min_samples_split': [2, 5, 10],          # Minimum number of samples required to split an internal node
+            'min_samples_leaf': [1, 2, 4],            # Minimum number of samples required at a leaf node
+            'max_features': ['sqrt', 'log2'],   # Number of features to consider when looking for the best split
+            'bootstrap': [True, False]                # Whether bootstrap samples are used when building trees
+        }
+
+        model = RandomForestClassifier(criterion='gini', random_state=42, verbose=1)
 
     # Train model
     # Set up the grid search with cross-validation
@@ -118,7 +133,7 @@ if __name__=='__main__':
         estimator=model,
         param_grid=param_grid,
         cv=3,                  # Number of folds for cross-validation
-        scoring='f1_macro',    # Evaluation metric
+        scoring='accuracy',    # Evaluation metric
         n_jobs=-1              # Use all available CPU cores
     )
     
@@ -126,16 +141,12 @@ if __name__=='__main__':
     grid_search.fit(X_train_padded, y_train)
     
     # Print the best parameters and best cross-validation score
-    best_params = grid_search.best_params_
+    # best_params = grid_search.best_params_
     print("Best Parameters:", grid_search.best_params_)
     print("Best Cross-Validation Accuracy:", grid_search.best_score_)
     
-    model = grid_search.best_estimator_
-    # y_pred = best_knn.predict(X_test)
-    
-    # Train on the whole data with the best parameters
-    model = KNeighborsClassifier(n_neighbors=best_params['n_neighbors'])
-    model.fit(X_train_padded, y_train)
+    best_model = grid_search.best_estimator_
+    best_model.fit(X_train_padded, y_train)
     
     # Preprocess test data
     X_test = df[df['Pacient'].isin(pacients_test)]
@@ -148,7 +159,7 @@ if __name__=='__main__':
         X_test_padded[i, :x.shape[0]] = x
     y_test = df[df['Pacient'].isin(pacients_test)].groupby('Pacient')['Label'].first().values
     
-    y_pred = model.predict(X_test_padded)
+    y_pred = best_model.predict(X_test_padded)
     
     test_accuracy = accuracy_score(y_test, y_pred)
     test_precision = precision_score(y_test, y_pred, average='macro')
