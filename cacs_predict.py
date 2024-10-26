@@ -16,7 +16,7 @@ import numpy as np
 import pathlib
 import nibabel as nib
 
-def get_basename(files):
+def get_gated_cardiac_basename(files):
     # Exclude the multi_label, multi_lesion and binary_lesion files with these names inside the list
     exclusion_names=['multi_label', 'multi_lesion', 'binary_lesion']
     gated_exam_basename = [file for file in files if 'cardiac' in file]
@@ -52,18 +52,8 @@ def main(args):
     pacients = os.listdir(data_dir)
     for pacient in pacients:
         print('Processing pacient: ' + pacient)
-        # files = os.listdir(os.path.join(data_dir, pacient, pacient))
-        # files.remove('partes_moles_HeartSegs.nii.gz')
-        # files.remove('partes_moles_FakeGated.nii.gz')
-        # for file in files:
-        
         # Read image
-        # filename = os.path.splitext(os.path.basename(file))[0]
-        # filename = [file for file in files if 'partes_moles' in file][0]
-        # print('Loading CT: ' + os.path.basename(filename))
-        basename = 'partes_moles_FakeGated.nii.gz'
-        # Remove file containing the word 'binary_lesion', 'multi_label' or 'multi_lesion' from list basename
-        # basename = get_basename(os.listdir(os.path.join(data_dir, pacient, pacient)))
+        basename = get_gated_cardiac_basename(os.listdir(os.path.join(data_dir, pacient, pacient)))
         print(basename)
         filename = os.path.splitext(basename)[0]
         # image_nifti = nib.load(os.path.join(data_dir, pacient, pacient, basename))

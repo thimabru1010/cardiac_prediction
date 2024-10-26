@@ -92,6 +92,7 @@ if __name__ == '__main__':
                 break
         else:
             # dilation of the mask
+            #! Increase Mask of CAC segmentation ???
             kernel = np.ones((7,7), np.uint8)
             print(heart_mask.shape)
             cardio_data = cv2.dilate(heart_mask, kernel, iterations=3)

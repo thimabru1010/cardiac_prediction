@@ -28,12 +28,13 @@ def get_integers_from_string(s, key):
                 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description='Classify the calcium scores')
-    argparser.add_argument('--scores_path', type=str, default='data/EXAMES/Calcium_Scores_Estimations/calcium_score_estimations.csv', help='CSV filepath with the calcium scores')
+    # argparser.add_argument('--scores_path', type=str, default='data/EXAMES/Calcium_Scores_Estimations/calcium_score_estimations.csv', help='CSV filepath with the calcium scores')
     argparser.add_argument('--folder_path', type=str, default='data/EXAMES/Calcium_Scores_Estimations/', help='Folder path to load csv files')
     # argparser.add_argument('--save_path', type=str, help='Path to save the results')
     args = argparser.parse_args()
     
     files = os.listdir(args.folder_path)
+    files = ['calcium_score_estimations_dilate_it=5_dilate_k=7.csv']
     for filename in files:
         print(filename)
         # scores_path = args.scores_path

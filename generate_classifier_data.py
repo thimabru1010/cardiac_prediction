@@ -92,9 +92,6 @@ def calculate_score(exam, mask, pixel_spacing, pacient_id=None):
 if __name__=='__main__':
     argparser = argparse.ArgumentParser(description='Calculate Agaston Score')
     argparser.add_argument('--root_path', type=str, default='data/EXAMES/Exames_NIFTI', help='Root path of the exams')
-    argparser.add_argument('--dilate', action='store_true', help='Wheter to dilate the mask or not')
-    argparser.add_argument('--dilate_kernel', type=int, default=7, help='Wheter to dilate the mask or not')
-    argparser.add_argument('--dilate_it', type=int, default=5, help='Wheter to dilate the mask or not')
     argparser.add_argument('--circle_radius', type=int, default=120, help='Radius for the Circle Mask')
     # argparser.add_argument('--save_path', type=str, help='Path to save the results')
     args = argparser.parse_args()
@@ -107,14 +104,12 @@ if __name__=='__main__':
     
     pacients = os.listdir(root_path)
     results = []
-    # dilate_kernel = int(args.dilate_kernel)
-    kernel = np.ones((args.dilate_kernel, args.dilate_kernel), np.uint8)
     train_circle_data = []
     
     for pacient in pacients:
+        # print(pacient)
         gated_exam_basename = get_basename(os.listdir(f'{root_path}/{pacient}/{pacient}'))
-        print(gated_exam_basename)
-        # print(gated_exam_basename)
+        print(pacient, gated_exam_basename)
         gated_exam_path = f'{root_path}/{pacient}/{pacient}/{gated_exam_basename}'
         
         # print(gated_exam_path)
@@ -124,6 +119,7 @@ if __name__=='__main__':
         gated_exam = gated_exam_img.get_fdata()
         
         circle_mask = np.zeros(gated_exam.shape[:2])
+        # circle_mask = np.ones(gated_exam.shape[:2])
         circle_mask = cv2.circle(circle_mask, (circle_mask.shape[1] // 2, circle_mask.shape[0] // 2), args.circle_radius, 1, -1)
         circle_mask = np.repeat(circle_mask[:, :, np.newaxis], gated_exam.shape[2], axis=2)
         
@@ -131,6 +127,8 @@ if __name__=='__main__':
         circle_score_gated, conected_lesions, clssf_data = calculate_score(gated_exam, circle_mask, pixel_spacing, pacient)
         train_circle_data.append(clssf_data)
         
-        train_circle_data = np.concatenate(train_circle_data, axis=0)
-        df_classifier_data = pd.DataFrame(train_circle_data, columns=['Pacient', 'Max HU', 'Centroid X', 'Centroid Y', 'Area', 'Channel'])
-        df_classifier_data['Pacient'] = df_classifier_data['Pacient'].astype(int)
+    train_circle_data = np.concatenate(train_circle_data, axis=0)
+    df_classifier_data = pd.DataFrame(train_circle_data, columns=['Pacient', 'Max HU', 'Centroid X', 'Centroid Y', 'Area', 'Channel'])
+    df_classifier_data['Pacient'] = df_classifier_data['Pacient'].astype(int)
+    df_classifier_data['Escore'] = pd.merge(df_classifier_data, df_score_ref, on='Pacient', how='left')['Escore']
+    df_classifier_data.to_csv(f'data/EXAMES/classifier_dataset_radius={args.circle_radius}.csv', index=False)
