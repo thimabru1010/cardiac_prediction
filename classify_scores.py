@@ -34,7 +34,11 @@ if __name__ == '__main__':
     args = argparser.parse_args()
     
     files = os.listdir(args.folder_path)
-    files = ['calcium_score_estimations_dilate_it=5_dilate_k=7.csv']
+    # files = ['calcium_score_estimations_dilate_it=5_dilate_k=7.csv']
+    max_f1 = 0
+    max_acc = 0
+    max_f1_method = ''
+    max_acc_method = ''
     for filename in files:
         print(filename)
         # scores_path = args.scores_path
@@ -86,10 +90,24 @@ if __name__ == '__main__':
         # print(f'Accuracy Estimated Fake Gated: {accuracy_efg}%')
         # print(f'Accuracy Direct Fake Gated: {accuracy_dfg}%')
         print(f'Accuracy Lesion Gated: {acc_lesion_gated}%')
-        print(f'Accuracy Circle Mask Gated: {acc_circle_gated}%')
+        # print(f'Accuracy Circle Mask Gated: {acc_circle_gated}%')
+        
 
         f1_score_roi_gated = f1_score(df['Label'].values, df['ROI Gated Clssf'].values, average='weighted')
         f1_score_lesion_gated = f1_score(df['Label'].values, df['Lesion Gated Clssf'].values, average='weighted')
+        
+        print(f'F1 Score ROI Gated: {f1_score_roi_gated}')
+        print(f'F1 Score Lesion Gated: {f1_score_lesion_gated}')
+        
+        if max_f1 < f1_score_lesion_gated:
+            max_f1 = f1_score_lesion_gated
+            max_f1_method = run_name
+            print(f'Max F1 Score: {max_f1}')
+        
+        if max_acc < acc_lesion_gated:
+            max_acc = acc_lesion_gated
+            max_acc_method = run_name
+            print(f'Max Accuracy: {max_acc}')
         
         #! Confusion Matrices
         # Define class names
@@ -137,16 +155,19 @@ if __name__ == '__main__':
             mlflow.log_artifact(roi_gated_cm_path)
             mlflow.log_artifact(lesion_gated_cm_path)
             
-        print('ROI Gated Clssf')
-        # Alternatively, print classification report
-        report = classification_report(df['Label'].values, df['ROI Gated Clssf'].values, target_names=class_names)
-        print('Classification Report:\n', report)
+        # print('ROI Gated Clssf')
+        # # Alternatively, print classification report
+        # report = classification_report(df['Label'].values, df['ROI Gated Clssf'].values, target_names=class_names)
+        # print('Classification Report:\n', report)
 
-        print('Lesion Gated Clssf')
-        # Alternatively, print classification report
-        report = classification_report(df['Label'].values, df['Lesion Gated Clssf'].values, target_names=class_names)
-        print('Classification Report:\n', report)
+        # print('Lesion Gated Clssf')
+        # # Alternatively, print classification report
+        # report = classification_report(df['Label'].values, df['Lesion Gated Clssf'].values, target_names=class_names)
+        # print('Classification Report:\n', report)
 
+    print()
+    print(f'Best method F1: {max_f1_method} with F1 Score: {max_f1}')
+    print(f"Best method Accuracy: {max_acc_method} with Accuracy: {max_acc}")
     # print('Circle Gated Clssf')
     # # Alternatively, print classification report
     # report = classification_report(df['Label'].values, df['Circle Gated Clssf'].values, target_names=class_names)

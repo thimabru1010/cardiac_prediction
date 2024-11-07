@@ -192,6 +192,13 @@ if __name__ == '__main__':
         new_nifti = nib.Nifti1Image(gated_mask_les, gated_exam_img.affine)
         nib.save(new_nifti, f'{root_path}/{pacient}/{pacient}/IncreasedLesion_mask_gated.nii.gz')
         
+        # Calculate the Area of Increasead Lesions Mask
+        print(np.unique(gated_mask_les))
+        gated_mask_les_tmp = gated_mask_les.copy()
+        gated_mask_les_tmp[gated_mask_les_tmp != 0] = 1
+        gated_les_area_sum = gated_mask_les_tmp.sum()
+        print('Gated Lesion Area:', gated_les_area_sum)
+        
         roi_score_gated, connected_lab, _ = calculate_score(gated_exam, gated_mask_lab, pixel_spacing)
         les_score_gated, connected_les, _ = calculate_score(gated_exam, gated_mask_les, pixel_spacing)
         # heart_score_gated = calculate_score(gated_exam, gated_heart_mask, pixel_spacing)
@@ -232,7 +239,7 @@ if __name__ == '__main__':
         # print('Heart Score Gated:', heart_score_gated) 
 
         heart_score_gated = 0
-        results.append([pacient, roi_score_gated, roi_score_fg, les_score_gated, les_score_fg, circle_score_gated])
+        results.append([pacient, roi_score_gated, roi_score_fg, les_score_gated, les_score_fg, circle_score_gated, gated_les_area_sum])
         # print(results)
         # results.append([pacient, estimated_score_gated, estimated_score_fg])
         # 1/0
@@ -252,7 +259,7 @@ if __name__ == '__main__':
     df_classifier_data = pd.merge(df_classifier_data, df_score_ref[['Pacient', 'Escore']], on='Pacient', how='left')
     df_classifier_data.to_csv(f'data/EXAMES/classifier_dataset_radius={args.circle_radius}.csv', index=False)
     
-    df = pd.DataFrame(results, columns=['Pacient', 'ROI Gated', 'ROI Fake Gated', 'Lesion Gated', 'Lesion Fake Gated', 'Circle Mask Gated'])
+    df = pd.DataFrame(results, columns=['Pacient', 'ROI Gated', 'ROI Fake Gated', 'Lesion Gated', 'Lesion Fake Gated', 'Circle Mask Gated', 'Lesion Area Gated'])
     # df = pd.DataFrame(results, columns=['Pacient', 'Estimated Score Gated', 'Estimated Score Fake Gated'])
     print(df.head())
     df['Pacient'] = df['Pacient'].astype(int)
@@ -263,7 +270,7 @@ if __name__ == '__main__':
     # df[['Estimated Score Gated', 'Estimated Score Fake Gated']] = df[['Estimated Score Gated', 'Estimated Score Fake Gated']].astype(int)
     df = pd.merge(df, df_score_ref[['Pacient', 'Escore']], on='Pacient', how='left')
     
-    df = df[['Pacient', 'Escore', 'ROI Gated', 'Lesion Gated', 'Circle Mask Gated']]
+    df = df[['Pacient', 'Escore', 'ROI Gated', 'Lesion Gated', 'Circle Mask Gated', 'Lesion Area Gated']]
     
     df['ROI Error'] = df['Escore'] - df['ROI Gated']
     df['Lesion Error'] = df['Escore'] - df['Lesion Gated']

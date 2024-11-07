@@ -12,6 +12,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 from classify_scores import classify
 from calculate_score import density_factor
 from sklearn.model_selection import cross_val_score
+from sklearn.decomposition import PCA
 # import train_data_split
 # import train_data_loader
 import argparse
@@ -21,6 +22,7 @@ if __name__=='__main__':
     argparser = argparse.ArgumentParser(description='Classify the calcium scores')
     argparser.add_argument('--model', type=str, default='mlp', choices=['mlp', 'knn', 'svm', 'rf'], help="Model's name")
     argparser.add_argument('--dataset', type=str, default='data/EXAMES/classifier_dataset_radius=120.csv', help='Dataset path to load csv files')
+    argparser.add_argument('--pca', action='store_true', help='Apply PCA to the data')
     # argparser.add_argument('--save_path', type=str, help='Path to save the results')
     args = argparser.parse_args()
     
@@ -30,6 +32,9 @@ if __name__=='__main__':
     df = pd.read_csv(args.dataset)
     print(df.head(10))
     df['Label'] = df['Escore'].apply(lambda x: classify(x))
+    # pacient = 176063
+    # print(df[df['Pacient'] == pacient])
+    # 1/0
     
     # print(df.groupby('Pacient')['Label'].apply(lambda x: x.value_counts()))
     class_balance = df.groupby('Pacient')['Label'].value_counts().reset_index()['Label'].value_counts()
@@ -50,49 +55,84 @@ if __name__=='__main__':
     df['Area'] = (df['Area'] - df['Area'].mean()) / df['Area'].std()
     df['Channel'] = (df['Channel'] - df['Channel'].min()) / (df['Channel'].max() - df['Channel'].min())
     df['Agatston Pred'] = (df['Agatston Pred'] - df['Agatston Pred'].mean()) / df['Agatston Pred'].std()
+    # Convert column Clusters to dummies
+    df = pd.get_dummies(df, columns=['Cluster'])
     
-    # Get list of non repeated pacients
-    pacients = df['Pacient'].unique()
-    print(pacients)
-    print()
-    pacient_labels = df.groupby('Pacient')['Label'].first()
-    print(pacient_labels)
-    # df.groupby('Pacient')['Label'].reset_index()['Labels']
-    # pacients = df['Pacient'].grou
-    
-    # Split the data
-    pacients_train, pacients_test, _, _= train_test_split(pacients, pacient_labels, test_size=0.25, stratify=pacient_labels, random_state=42)
-    print(len(pacients_train), len(pacients_test))
-    
-    # X_train = df[['Pacient']]
-    # print(X_train.shape)
-    features_size = df.groupby('Pacient').size().max() * 6
-    print(features_size)
-    
-    X_train = df[df['Pacient'].isin(pacients_train)]
-    
-    # print(features_size.max())
+    # print(df.head(10))
     # 1/0
+        
+    # Get list of non repeated pacients
+    # pacients = df['Pacient'].unique()
+    # print(pacients)
+    # print()
+    # Sort by pacients
+    df = df.sort_values(by='Pacient')
+    pacient_labels = df.groupby('Pacient')['Label'].first().reset_index()
+    pacients = pacient_labels['Pacient'].values
+    pacient_labels = pacient_labels['Label'].values
+    print(pacients)
+    print(pacient_labels)
     
+    if args.pca:
+        pca = PCA(n_components=0.99999)
+        # df_pca = pd.DataFrame([], columns=['Pacient', 'Max HU', 'Centroid X', 'Centroid Y', 'Area', 'Agatston Pred', 'Channel', 'PCA Col'])
+        pca_components = []
+        for pacient in pacients:
+            # print(pacient)
+            X = df[df['Pacient'] == pacient][['Max HU', 'Centroid X', 'Centroid Y', 'Area', 'Agatston Pred', 'Channel']].values
+            # print(f"Original Shape: {X.shape}")
+            X = X.transpose()
+            # print(X.shape)
+            pca.fit(X)
+            
+            # Insert the PCA components into the dataframe
+            components = pca.transform(X).transpose()
+            # print(components.shape)
+            for comp in range(components.shape[0]):
+                pca_components.append([pacient] + components[comp, :].tolist() + [comp])
+                
+        pca_components = np.stack(pca_components, axis=1).transpose()
+        print(pca_components.shape)
+        df_pca = pd.DataFrame(pca_components, columns=['Pacient', 'Max HU', 'Centroid X', 'Centroid Y', 'Area', 'Agatston Pred', 'Channel', 'PCA Comp'])
+        print(f"PCA Dataframe shape: {df_pca.shape}")
+        df = pd.merge(df[['Pacient', 'Label']].drop_duplicates(), df_pca, on=['Pacient'], how='left')
+        print(df.shape)
+        print(df.head(10))
+                
+    # Split the data
+    # print(pacients)
+    while True:
+        pacients_train, pacients_test, y_train, y_test = train_test_split(pacients, pacient_labels, test_size=0.25, stratify=pacient_labels)
+        print(f"Train/Test Split: {len(pacients_train)}/{len(pacients_test)}")
+        if 176063 in pacients_test:
+            break
+    # print(len(pacients_train), len(pacients_test))
+    
+    df['XY'] = df['Centroid X'] * df['Centroid Y']
     variables = ['Max HU', 'Centroid X', 'Centroid Y', 'Area', 'Agatston Pred', 'Channel']
     
-    X_train = X_train.groupby('Pacient')[variables].apply(lambda x: x.values)
-    print(X_train.head())
+    # print(df.groupby('Pacient').size().max())
+    features_size = df.groupby('Pacient').size().max() * len(variables)
+    print(f"Number of Features: {features_size}")
     
-    # X_train = np.stack(X_train.values, axis=0)
-    X_train = X_train.values
-    print(X_train.shape)
+    # Sort the data by pacient
+    # df = df.sort_values(by='Pacient')
     
+    df_train = df[df['Pacient'].isin(pacients_train)].groupby('Pacient')
+    X_train = df_train[variables].apply(lambda x: x.values).values
+    # y_train = df_train['Label'].first().values
+    # X_train = X_train.values
+    print(f"Train Data Shape: {X_train.shape}")
+    
+    # Pad the data
     X_train_padded = np.zeros((X_train.shape[0], features_size))
-    
     for i, x in enumerate(X_train):
         # print(x.shape)
         x = x.reshape(-1)
         X_train_padded[i, :x.shape[0]] = x
-        
-    print(X_train_padded.shape)
-    y_train = df[df['Pacient'].isin(pacients_train)].groupby('Pacient')['Label'].first().values
-    print(len(y_train))
+    print(f"Train Padded Data Shape: {X_train_padded.shape}")
+    # y_train = df[df['Pacient'].isin(pacients_train)].groupby('Pacient')['Label'].first().values
+    # print(len(y_train))
     
     if args.model == 'mlp':
         model = MLPClassifier(hidden_layer_sizes=(1000, 100, 50, 10), max_iter=100, random_state=42,\
@@ -101,11 +141,10 @@ if __name__=='__main__':
         # Define the parameter grid to search over
         param_grid = {
             'n_neighbors': [3, 5, 7, 9, 11],         # Different values for 'k'
-            'weights': ['uniform', 'distance'],       # Weighting by distance or uniform
             'metric': ['euclidean', 'manhattan']      # Distance metrics
         }
         # Initialize the KNN classifier
-        model = KNeighborsClassifier(verbose=1)
+        model = KNeighborsClassifier(weights='distance')
         #model = KNeighborsClassifier(n_neighbors=10, n_jobs=10, weights='distance', metric='euclidean')
     elif args.model == 'svm':
         param_grid = {
@@ -125,7 +164,7 @@ if __name__=='__main__':
             'bootstrap': [True, False]                # Whether bootstrap samples are used when building trees
         }
 
-        model = RandomForestClassifier(criterion='gini', random_state=42, verbose=1)
+        model = RandomForestClassifier(criterion='gini', class_weight='balanced', random_state=42, verbose=1)
 
     # Train model
     # Set up the grid search with cross-validation
@@ -149,15 +188,18 @@ if __name__=='__main__':
     best_model.fit(X_train_padded, y_train)
     
     # Preprocess test data
-    X_test = df[df['Pacient'].isin(pacients_test)]
+    df_test = df[df['Pacient'].isin(pacients_test)].groupby('Pacient')
+    
     # print(X_test.shape)
-    X_test = X_test.groupby('Pacient')[variables].apply(lambda x: x.values)
+    # y_test = df_test['Label'].first().values
+    X_test = df_test[variables].apply(lambda x: x.values).values
+
+    # Pad Test Data
     X_test_padded = np.zeros((X_test.shape[0], features_size))
     for i, x in enumerate(X_test):
         # print(x.shape)
         x = x.reshape(-1)
         X_test_padded[i, :x.shape[0]] = x
-    y_test = df[df['Pacient'].isin(pacients_test)].groupby('Pacient')['Label'].first().values
     
     y_pred = best_model.predict(X_test_padded)
     
@@ -172,8 +214,15 @@ if __name__=='__main__':
     # print(f"Recall: {test_recall:.3f}")
     print(f"F1 Score: {test_f1:.3f}")
     
+    # Save classifier predictions
+    # df = pd.read_csv('data/EXAMES/Calcium_Scores_Estimations/calcium_score_estimations_dilate_it=5_dilate_k=5.csv')
+    results = pd.DataFrame({'Pacient': pacients_test, 'Label': y_test, 'Prediction': y_pred})
+    # df = pd.merge(df, results, on='Pacient', how='left')
+    dataset_filename = args.dataset.split('/')[-1]
+    results.to_csv(f'data/EXAMES/preds_{args.model}_pca={args.pca}_{dataset_filename}', index=True)
+    
     # Compare Accuracy to Lesion Model baseline
-    df_baseline = pd.read_csv('data/EXAMES/Calcium_Scores_Estimations/calcium_score_estimations_dilate_it=5_dilate_k=7.csv')
+    df_baseline = pd.read_csv('data/EXAMES/Calcium_Scores_Estimations/calcium_score_estimations_dilate_it=5_dilate_k=5.csv')
     df_baseline = df_baseline[df_baseline['Pacient'].isin(pacients_test)]
     # print(df_baseline.shape)
     # X_test = X_test.groupby('Pacient')[['Max HU', 'Centroid X', 'Centroid Y', 'Area']].apply(lambda x: x.values)
@@ -192,6 +241,8 @@ if __name__=='__main__':
     # print(f"Recall: {baseline_recall:.3f}")
     print(f"F1 Score: {baseline_f1:.3f}")
     # print(f"Accuracy Baseline (Lesion Gated): {accuracy_baseline:.2f}")
+    
+    
     
     
     

@@ -1,8 +1,9 @@
 artifact_uri: file:///home/thiago/IDOR/CoracaoMotionBlur/cardiac_prediction/mlruns/622848868831593641/eb525313760b4228b70b6389fa45bc49/artifacts
+deleted_time: 1730043738236
 end_time: 1729004351750
 entry_point_name: ''
 experiment_id: '622848868831593641'
-lifecycle_stage: active
+lifecycle_stage: deleted
 run_id: eb525313760b4228b70b6389fa45bc49
 run_name: dilated it=1 k=5
 run_uuid: eb525313760b4228b70b6389fa45bc49
