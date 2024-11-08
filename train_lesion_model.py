@@ -45,18 +45,18 @@ if __name__=='__main__':
     print(df.head(10))
     print(df.shape)
     
-    df['density_factor'] = df['Max HU'].apply(lambda x: density_factor(x))
-    df['Agatston Pred'] = df['density_factor'] * df['Area']
-    # Normalize the data
-    # df['Max HU'] = (df['Max HU'] - df['Max HU'].mean()) / df['Max HU'].std()
-    df['Max HU'] = (df['Max HU'] - 130) / 3000
-    df['Centroid X'] = (df['Centroid X']) / 512
-    df['Centroid Y'] = (df['Centroid Y']) / 512
-    df['Area'] = (df['Area'] - df['Area'].mean()) / df['Area'].std()
-    df['Channel'] = (df['Channel'] - df['Channel'].min()) / (df['Channel'].max() - df['Channel'].min())
-    df['Agatston Pred'] = (df['Agatston Pred'] - df['Agatston Pred'].mean()) / df['Agatston Pred'].std()
-    # Convert column Clusters to dummies
-    df = pd.get_dummies(df, columns=['Cluster'])
+    # df['density_factor'] = df['Max HU'].apply(lambda x: density_factor(x))
+    # df['Agatston Pred'] = df['density_factor'] * df['Area']
+    # # Normalize the data
+    # # df['Max HU'] = (df['Max HU'] - df['Max HU'].mean()) / df['Max HU'].std()
+    # df['Max HU'] = (df['Max HU'] - 130) / 3000
+    # df['Centroid X'] = (df['Centroid X']) / 512
+    # df['Centroid Y'] = (df['Centroid Y']) / 512
+    # df['Area'] = (df['Area'] - df['Area'].mean()) / df['Area'].std()
+    # df['Channel'] = (df['Channel'] - df['Channel'].min()) / (df['Channel'].max() - df['Channel'].min())
+    # df['Agatston Pred'] = (df['Agatston Pred'] - df['Agatston Pred'].mean()) / df['Agatston Pred'].std()
+    # # Convert column Clusters to dummies
+    # df = pd.get_dummies(df, columns=['Cluster'])
     
     # print(df.head(10))
     # 1/0
@@ -108,8 +108,9 @@ if __name__=='__main__':
             break
     # print(len(pacients_train), len(pacients_test))
     
-    df['XY'] = df['Centroid X'] * df['Centroid Y']
-    variables = ['Max HU', 'Centroid X', 'Centroid Y', 'Area', 'Agatston Pred', 'Channel']
+    # df['XY'] = df['Centroid X'] * df['Centroid Y']
+    # variables = ['Max HU', 'Centroid X', 'Centroid Y', 'Area', 'Agatston Pred', 'Channel', 'Cluster_0', 'Cluster_1', 'Cluster_2', 'Cluster_3', 'Cluster_4']
+    variables = ['Latent Factor 1', 'Latent Factor 2', 'Latent Factor 3']
     
     # print(df.groupby('Pacient').size().max())
     features_size = df.groupby('Pacient').size().max() * len(variables)
@@ -149,11 +150,11 @@ if __name__=='__main__':
     elif args.model == 'svm':
         param_grid = {
             'C': [0.1, 1, 10, 100],                 # Regularization parameter
-            'kernel': ['linear', 'rbf', 'poly'],     # Different kernel types
-            'degree': [2, 3, 4],                     # Degree of the polynomial kernel (only for 'poly' kernel)
-            'gamma': ['scale', 'auto'],              # Kernel coefficient for 'rbf', 'poly', and 'sigmoid'
+            'kernel': ['linear'],     # Different kernel types
+            # 'degree': [2, 3, 4],                     # Degree of the polynomial kernel (only for 'poly' kernel)
+            'gamma': ['scale', 'auto']            # Kernel coefficient for 'rbf', 'poly', and 'sigmoid'
         }
-        model = SVC(probability=True, random_state=42, verbose=True)
+        model = SVC(random_state=42)
     elif args.model == 'rf':
         param_grid = {
             'n_estimators': [50, 100, 200],           # Number of trees in the forest
@@ -177,6 +178,7 @@ if __name__=='__main__':
     )
     
     # Fit grid search on the training data
+    print('Starting Grid Search')
     grid_search.fit(X_train_padded, y_train)
     
     # Print the best parameters and best cross-validation score
@@ -185,6 +187,7 @@ if __name__=='__main__':
     print("Best Cross-Validation Accuracy:", grid_search.best_score_)
     
     best_model = grid_search.best_estimator_
+    print('Training best model')
     best_model.fit(X_train_padded, y_train)
     
     # Preprocess test data
