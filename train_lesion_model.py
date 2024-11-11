@@ -110,7 +110,8 @@ if __name__=='__main__':
     
     # df['XY'] = df['Centroid X'] * df['Centroid Y']
     # variables = ['Max HU', 'Centroid X', 'Centroid Y', 'Area', 'Agatston Pred', 'Channel', 'Cluster_0', 'Cluster_1', 'Cluster_2', 'Cluster_3', 'Cluster_4']
-    variables = ['Latent Factor 1', 'Latent Factor 2', 'Latent Factor 3']
+    # variables = ['Latent Factor 1', 'Latent Factor 2', 'Latent Factor 3']
+    variables = df.iloc[:, 2:].columns.tolist()
     
     # print(df.groupby('Pacient').size().max())
     features_size = df.groupby('Pacient').size().max() * len(variables)

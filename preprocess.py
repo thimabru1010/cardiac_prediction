@@ -14,21 +14,24 @@ if __name__ == '__main__':
     root_path = 'data/EXAMES/Exames_DICOM'
     # output_path = 'data/EXAMES/Exames_Separados/11517/11517'
     
-    pacients = os.listdir(root_path)
-    pacients_error = []
-    for pacient in tqdm(pacients):
-        print(pacient)
-        pacient_path = os.path.join(root_path, pacient)
-        output_path = os.path.join('data/EXAMES/Exames_NIFTI', pacient, pacient)
+    patients = os.listdir(root_path)
+    patients_error = []
+    for patient in tqdm(patients):
+        patient = '180132'
+        print(patient)
+        patient_path = os.path.join(root_path, patient)
+        output_path = os.path.join('data/EXAMES/Exames_NIFTI2', patient, patient)
         os.makedirs(output_path, exist_ok=True)
-        pacient_path = os.path.join(root_path, pacient, pacient)
+        patient_path = os.path.join(root_path, patient, patient)
+        dicom2nifti.convert_directory(patient_path, output_path)
         try:
-            dicom2nifti.convert_directory(pacient_path, output_path)
+            dicom2nifti.convert_directory(patient_path, output_path)
         except Exception as e:
-                print(f'Error in {pacient}')
-                pacients_error.append(pacient)
+                print(f'Error in {patient}')
+                patients_error.append(patient)
                 print(e)
+        break
     print('finished')
     
-    print('Errors found in pacients:')
-    print(pacients_error)
+    print('Errors found in patients:')
+    print(patients_error)

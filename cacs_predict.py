@@ -15,19 +15,21 @@ import SimpleITK as sitk
 import numpy as np
 import pathlib
 import nibabel as nib
+import argparse
 
-def get_gated_cardiac_basename(files):
-    # Exclude the multi_label, multi_lesion and binary_lesion files with these names inside the list
-    exclusion_names=['multi_label', 'multi_lesion', 'binary_lesion']
+def get_cardiac_basename(files):
+    exclude_files = ['multi_label', 'multi_lesion', 'binary_lesion']
+    files = [file for file in files if not any(f in file for f in exclude_files)]
     gated_exam_basename = [file for file in files if 'cardiac' in file]
-    exclusion_files = [file for file in gated_exam_basename if any(f in file for f in exclusion_names)]
-    gated_exam_basename.remove(exclusion_files[0])
-    gated_exam_basename.remove(exclusion_files[1])
-    gated_exam_basename.remove(exclusion_files[2])
+    return gated_exam_basename[0]
+
+def get_partes_moles_basename(files):
+    exclude_files=['partes_moles_HeartSegs', 'partes_moles_FakeGated', 'partes_moles_FakeGated_CircleMask']
+    files = [file for file in files if not any(f in file for f in exclude_files)]
+    gated_exam_basename = [file for file in files if 'partes_moles_body' in file or 'mediastino' in file]
     return gated_exam_basename[0]
 
 def main(args):
-    
     print('--- Start processing ---')
     # Define directories
     data_dir = args.data_dir
@@ -49,15 +51,18 @@ def main(args):
 
     # Load image files from data folder    
     # files = glob(data_dir + '/*.nii.gz')
-    pacients = os.listdir(data_dir)
-    for pacient in pacients:
-        print('Processing pacient: ' + pacient)
+    patients = os.listdir(data_dir)
+    for patient in patients:
+        print('Processing patient: ' + patient)
         # Read image
-        basename = get_gated_cardiac_basename(os.listdir(os.path.join(data_dir, pacient, pacient)))
+        basename = get_gated_cardiac_basename(os.listdir(os.path.join(data_dir, patient, patient)))
+        if args.partes_moles:
+            print('Inferring partes_moles')
+            basename = get_partes_moles_basename(os.listdir(os.path.join(data_dir, patient, patient)))
         print(basename)
         filename = os.path.splitext(basename)[0]
-        # image_nifti = nib.load(os.path.join(data_dir, pacient, pacient, basename))
-        image_sitk = sitk.ReadImage(os.path.join(data_dir, pacient, pacient, basename))
+        # image_nifti = nib.load(os.path.join(data_dir, patient, patient, basename))
+        image_sitk = sitk.ReadImage(os.path.join(data_dir, patient, patient, basename))
         image = sitk.GetArrayFromImage(image_sitk)
         # image = image_nifti.get_fdata()
         # image = np.transpose(image, (2, 1, 0))
@@ -114,7 +119,7 @@ def main(args):
         # print('Saveing predictions from: ' + os.path.basename(file))
         # Save predictions
         # filepath = os.path.join(prediction_dir, filename + '_binary_lesion.nrrd')
-        prediction_path = os.path.join(prediction_dir, pacient, pacient)
+        prediction_path = os.path.join(prediction_dir, patient, patient)
         filepath = os.path.join(prediction_path, filename + '_binary_lesion.nii.gz')
         
         # Save predictions as nifti
@@ -168,6 +173,7 @@ if __name__ == '__main__':
     parser.add_argument('--device', '-gpu', type=str,
                         action='store', dest='device',
                         help='Devoce NO. of GPU')
+    parser.add_argument('--partes_moles', action='store_true', help='Whether to infer partes_moles exams')
 
     args = parser.parse_args()
     main(args)
