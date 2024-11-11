@@ -144,7 +144,9 @@ if __name__ == '__main__':
     kernel = np.ones((args.dilate_kernel, args.dilate_kernel), np.uint8)
     train_circle_data = []
     #! Fake Gated
+    print('Fake Gated Agaston Score Calculation')
     if args.partes_moles:
+        exam_folder = 'Fake_Gated'
         exclude_files = ['partes_moles_HeartSegs', 'partes_moles_FakeGated', 'partes_moles_FakeGated_CircleMask']
         keywords_partes_moles = ['partes_moles_body', 'mediastino']
         for patient in patients:
@@ -174,69 +176,67 @@ if __name__ == '__main__':
             les_score_fg, _, _ = calculate_score(fg_exam, fg_mask_les, pixel_spacing)
             
     #! Gated
-    print('Gated Agaston Score Calculation')
-    exclude_files = ['multi_label', 'multi_lesion', 'binary_lesion']
-    keywords_cardiac = ['cardiac']
-    for patient in patients:
-        roi_score_fg = 0
-        les_score_fg = 0
-        #! Gated
-        gated_exam_basename = get_basename(os.listdir(f'{root_path}/{patient}/{patient}'))
-        print(gated_exam_basename)
-        gated_exam_path = f'{root_path}/{patient}/{patient}/{gated_exam_basename}'
-        gated_mask_les_path = f'{root_path}/{patient}/{patient}/{gated_exam_basename[:-3]}_multi_lesion.nii.gz'
-        gated_mask_lab_path = f'{root_path}/{patient}/{patient}/{gated_exam_basename[:-3]}_multi_label.nii.gz'
-        # gated_heart_mask_path = f'{root_path}/{patient}/{patient}/cardiac_IncreasedMask.nii.gz'
-        
-        # print(gated_exam_path)
-        gated_exam_img = nib.load(gated_exam_path)
-        gated_mask_les_img = nib.load(gated_mask_les_path)
-        gated_mask_lab_img = nib.load(gated_mask_lab_path)
-        
-        gated_exam = gated_exam_img.get_fdata()
-        gated_mask_les = gated_mask_les_img.get_fdata()
-        gated_mask_lab = gated_mask_lab_img.get_fdata()
-        
-        calc_candidates_mask = gated_exam.copy()
-        calc_candidates_mask[calc_candidates_mask < 130] = 0
-        calc_candidates_mask[calc_candidates_mask >= 130] = 1
-        
-        # Create and save a new NIfTI image from the modified data
-        create_save_nifti(calc_candidates_mask, gated_exam_img.affine, f'{root_path}/{patient}/{patient}/cardiac_CalciumCandidates.nii.gz')
+    if not args.partes_moles:
+        exam_folder = 'Gated'
+        print('Gated Agaston Score Calculation')
+        exclude_files = ['multi_label', 'multi_lesion', 'binary_lesion']
+        keywords_cardiac = ['cardiac']
+        for patient in patients:
+            gated_exam_basename = get_basename(os.listdir(f'{root_path}/{patient}/{patient}'))
+            print(gated_exam_basename)
+            gated_exam_path = f'{root_path}/{patient}/{patient}/{gated_exam_basename}'
+            gated_mask_les_path = f'{root_path}/{patient}/{patient}/{gated_exam_basename[:-3]}_multi_lesion.nii.gz'
+            gated_mask_lab_path = f'{root_path}/{patient}/{patient}/{gated_exam_basename[:-3]}_multi_label.nii.gz'
+            # gated_heart_mask_path = f'{root_path}/{patient}/{patient}/cardiac_IncreasedMask.nii.gz'
+            
+            # print(gated_exam_path)
+            gated_exam_img = nib.load(gated_exam_path)
+            gated_mask_les_img = nib.load(gated_mask_les_path)
+            gated_mask_lab_img = nib.load(gated_mask_lab_path)
+            
+            gated_exam = gated_exam_img.get_fdata()
+            gated_mask_les = gated_mask_les_img.get_fdata()
+            gated_mask_lab = gated_mask_lab_img.get_fdata()
+            
+            calc_candidates_mask = gated_exam.copy()
+            calc_candidates_mask[calc_candidates_mask < 130] = 0
+            calc_candidates_mask[calc_candidates_mask >= 130] = 1
+            
+            # Create and save a new NIfTI image from the modified data
+            create_save_nifti(calc_candidates_mask, gated_exam_img.affine, f'{root_path}/{patient}/{patient}/cardiac_CalciumCandidates.nii.gz')
 
-        if args.dilate:
-            # gated_mask_lab = cv2.dilate(gated_mask_lab, kernel, iterations=args.dilate_it)
-            gated_mask_les = cv2.dilate(gated_mask_les, kernel, iterations=args.dilate_it)
-        
-        create_save_nifti(gated_mask_lab, gated_exam_img.affine, f'{root_path}/{patient}/{patient}/IncreasedLesion_mask_gated.nii.gz')
-        
-        gated_les_area_sum = calculate_area(gated_mask_les)
-        print('Gated Lesion Area:', gated_les_area_sum)
-        
-        pixel_spacing = gated_exam_img.header.get_zooms()[:3]  # (x, y, z) spacing
-        roi_score_gated, connected_lab, _ = calculate_score(gated_exam, gated_mask_lab, pixel_spacing)
-        les_score_gated, connected_les, _ = calculate_score(gated_exam, gated_mask_les, pixel_spacing)
-        
-        create_save_nifti(connected_lab, gated_exam_img.affine, f'{root_path}/{patient}/{patient}/ROISingleLesions_mask_gated.nii.gz')
-        create_save_nifti(connected_les, gated_exam_img.affine, f'{root_path}/{patient}/{patient}/LesionSingleLesions_mask_gated.nii.gz')
+            if args.dilate:
+                # gated_mask_lab = cv2.dilate(gated_mask_lab, kernel, iterations=args.dilate_it)
+                gated_mask_les = cv2.dilate(gated_mask_les, kernel, iterations=args.dilate_it)
+            
+            create_save_nifti(gated_mask_lab, gated_exam_img.affine, f'{root_path}/{patient}/{patient}/IncreasedLesion_mask_gated.nii.gz')
+            
+            gated_les_area_sum = calculate_area(gated_mask_les)
+            print('Gated Lesion Area:', gated_les_area_sum)
+            
+            pixel_spacing = gated_exam_img.header.get_zooms()[:3]  # (x, y, z) spacing
+            roi_score_gated, connected_lab, _ = calculate_score(gated_exam, gated_mask_lab, pixel_spacing)
+            les_score_gated, connected_les, _ = calculate_score(gated_exam, gated_mask_les, pixel_spacing)
+            
+            create_save_nifti(connected_lab, gated_exam_img.affine, f'{root_path}/{patient}/{patient}/ROISingleLesions_mask_gated.nii.gz')
+            create_save_nifti(connected_les, gated_exam_img.affine, f'{root_path}/{patient}/{patient}/LesionSingleLesions_mask_gated.nii.gz')
 
-        circle_mask = create_circle_mask((circle_mask.shape[1] // 2, circle_mask.shape[0] // 2), args.circle_radius, gated_exam.shape)
+            circle_mask = create_circle_mask((circle_mask.shape[1] // 2, circle_mask.shape[0] // 2), args.circle_radius, gated_exam.shape)
 
-        create_save_nifti(circle_mask, gated_exam_img.affine, f'{root_path}/{patient}/{patient}/circle_mask_gated.nii.gz')
-        create_save_nifti(circle_mask*gated_mask_les, gated_exam_img.affine, f'{root_path}/{patient}/{patient}/circle_lesions_mask_gated.nii.gz')
-        create_save_nifti(conected_lesions, gated_exam_img.affine, f'{root_path}/{patient}/{patient}/CircleSingleLesions_mask_gated.nii.gz')
-        
-        circle_score_gated, conected_lesions, clssf_data = calculate_score(gated_exam, circle_mask, pixel_spacing, patient)
+            create_save_nifti(circle_mask, gated_exam_img.affine, f'{root_path}/{patient}/{patient}/circle_mask_gated.nii.gz')
+            create_save_nifti(circle_mask*gated_mask_les, gated_exam_img.affine, f'{root_path}/{patient}/{patient}/circle_lesions_mask_gated.nii.gz')
+            create_save_nifti(conected_lesions, gated_exam_img.affine, f'{root_path}/{patient}/{patient}/CircleSingleLesions_mask_gated.nii.gz')
+            
+            circle_score_gated, conected_lesions, clssf_data = calculate_score(gated_exam, circle_mask, pixel_spacing, patient)
 
-        train_circle_data.append(clssf_data)
-        
-        print('ROI Score gated:', roi_score_gated)
-        print('Lesion Score gated:', les_score_gated)
-        # print('Full Score Gated:', full_score_gated)
-        print('Circle Score Gated:', circle_score_gated)
-        print(f'Reference Score: {df_score_ref[df_score_ref["patient"] == int(patient)]["Escore"].values[0]}')
+            train_circle_data.append(clssf_data)
+            
+            print('ROI Score gated:', roi_score_gated)
+            print('Lesion Score gated:', les_score_gated)
+            print('Circle Score Gated:', circle_score_gated)
+            print(f'Reference Score: {df_score_ref[df_score_ref["patient"] == int(patient)]["Escore"].values[0]}')
 
-        results.append([patient, roi_score_gated, roi_score_fg, les_score_gated, les_score_fg, circle_score_gated, gated_les_area_sum])
+            results.append([patient, roi_score_gated, roi_score_fg, les_score_gated, les_score_fg, circle_score_gated, gated_les_area_sum])
 
 
     df_score_ref = pd.read_excel('data/EXAMES/cac_score_data.xlsx')
@@ -245,15 +245,14 @@ if __name__ == '__main__':
     
     save_classifier_data(train_circle_data, df_score_ref)
         
-    df = pd.DataFrame(results, columns=['patient', 'ROI Gated', 'ROI Fake Gated', 'Lesion Gated', 'Lesion Fake Gated',\
-        'Circle Mask Gated', 'Lesion Area Gated'], dtype=int)
+    df = pd.DataFrame(results, columns=['patient', 'ROI', 'Lesion Gated', 'Circle Mask', 'Lesion Area'], dtype=int)
     df = pd.merge(df, df_score_ref[['patient', 'Escore']], on='patient', how='left')
-    df = df[['patient', 'Escore', 'ROI Gated', 'Lesion Gated', 'Circle Mask Gated', 'Lesion Area Gated']]
+    df = df[['patient', 'Escore', 'ROI', 'Lesion', 'Circle Mask', 'Lesion Area']]
     
     if args.dilate:
-        df.to_csv(f'data/EXAMES/Calcium_Scores_Estimations/calcium_score_estimations_dilate_it={args.dilate_it}_dilate_k={args.dilate_kernel}.csv', index=False)
+        df.to_csv(f'data/EXAMES/Calcium_Scores_Estimations/{exam_folder}/calcium_score_estimations_dilate_it={args.dilate_it}_dilate_k={args.dilate_kernel}.csv', index=False)
     else:
-        df.to_csv('data/EXAMES/Calcium_Scores_Estimations/calcium_score_estimations.csv', index=False)
+        df.to_csv(f'data/EXAMES/Calcium_Scores_Estimations/{exam_folder}/calcium_score_estimations.csv', index=False)
         
     print_avg_error(df)
 
