@@ -14,6 +14,14 @@ import SimpleITK as sitk
 import pandas as pd
 import argparse
 
+def save_classifier_data(train_circle_data, df_score_ref):
+    train_circle_data = np.concatenate(train_circle_data, axis=0)
+    df_classifier_data = pd.DataFrame(train_circle_data, columns=['patient', 'Max HU', 'Centroid X', 'Centroid Y', 'Area', 'Channel'])
+    df_classifier_data['patient'] = df_classifier_data['patient'].astype(int)
+    
+    df_classifier_data = pd.merge(df_classifier_data, df_score_ref[['patient', 'Escore']], on='patient', how='left')
+    df_classifier_data.to_csv(f'data/EXAMES/classifier_dataset_radius={args.circle_radius}.csv', index=False)
+        
 def print_avg_error(df):
     df['ROI Error'] = df['Escore'] - df['ROI Gated']
     df['Lesion Error'] = df['Escore'] - df['Lesion Gated']
@@ -136,38 +144,36 @@ if __name__ == '__main__':
     kernel = np.ones((args.dilate_kernel, args.dilate_kernel), np.uint8)
     train_circle_data = []
     #! Fake Gated
-    exclude_files = ['partes_moles_HeartSegs', 'partes_moles_FakeGated', 'partes_moles_FakeGated_CircleMask']
-    keywords_partes_moles = ['partes_moles_body', 'mediastino']
-    for patient in patients:
-        # patient = '176253'
-        print()
-        print(patient)
-        # patient = '180466'
-        # print('Fake Gated Agaston Score Calculation')
-        fg_exam_path = f'{root_path}/{patient}/{patient}/partes_moles_FakeGated.nii.gz'
-        # Region of Intrest of the calcified candidates
-        fg_mask_lab_path = f'{root_path}/{patient}/{patient}/partes_moles_FakeGated.nii_multi_label.nii.gz'
-        # Exacly Segmentation of the calcified regions
-        fg_mask_les_path = f'{root_path}/{patient}/{patient}/partes_moles_FakeGated.nii_multi_lesion.nii.gz'
-        
-        fg_exam_img = nib.load(fg_exam_path)#.get_fdata()
-        fg_mask_lab_img = nib.load(fg_mask_lab_path)#.get_fdata()
-        fg_mask_les_img = nib.load(fg_mask_les_path)#.get_fdata()
-        
-        fg_exam = fg_exam_img.get_fdata()
-        fg_mask_lab = fg_mask_lab_img.get_fdata()#.transpose(1, 2, 0)
-        fg_mask_les = fg_mask_les_img.get_fdata()#.transpose(1, 2, 0)
-        
-        print(fg_exam.shape)
-        
-        pixel_spacing = fg_exam_img.header.get_zooms()[:3]  # (x, y, z) spacing
-        
-        roi_score_fg, _, _ = calculate_score(fg_exam, fg_mask_lab, pixel_spacing)
-        les_score_fg, _, _ = calculate_score(fg_exam, fg_mask_les, pixel_spacing)
-        
-        # print('Estimated Faked Gated score:', estimated_score_fg)
-        # print('Direct Fake Gated Score:', direct_score_fg)
-        
+    if args.partes_moles:
+        exclude_files = ['partes_moles_HeartSegs', 'partes_moles_FakeGated', 'partes_moles_FakeGated_CircleMask']
+        keywords_partes_moles = ['partes_moles_body', 'mediastino']
+        for patient in patients:
+            print()
+            print(patient)
+            # patient = '180466'
+            # print('Fake Gated Agaston Score Calculation')
+            fg_exam_path = f'{root_path}/{patient}/{patient}/partes_moles_FakeGated.nii.gz'
+            # Region of Intrest of the calcified candidates
+            fg_mask_lab_path = f'{root_path}/{patient}/{patient}/partes_moles_FakeGated.nii_multi_label.nii.gz'
+            # Exacly Segmentation of the calcified regions
+            fg_mask_les_path = f'{root_path}/{patient}/{patient}/partes_moles_FakeGated.nii_multi_lesion.nii.gz'
+            
+            fg_exam_img = nib.load(fg_exam_path)#.get_fdata()
+            fg_mask_lab_img = nib.load(fg_mask_lab_path)#.get_fdata()
+            fg_mask_les_img = nib.load(fg_mask_les_path)#.get_fdata()
+            
+            fg_exam = fg_exam_img.get_fdata()
+            fg_mask_lab = fg_mask_lab_img.get_fdata()#.transpose(1, 2, 0)
+            fg_mask_les = fg_mask_les_img.get_fdata()#.transpose(1, 2, 0)
+            
+            print(fg_exam.shape)
+            
+            pixel_spacing = fg_exam_img.header.get_zooms()[:3]  # (x, y, z) spacing
+            
+            roi_score_fg, _, _ = calculate_score(fg_exam, fg_mask_lab, pixel_spacing)
+            les_score_fg, _, _ = calculate_score(fg_exam, fg_mask_les, pixel_spacing)
+            
+    #! Gated
     print('Gated Agaston Score Calculation')
     exclude_files = ['multi_label', 'multi_lesion', 'binary_lesion']
     keywords_cardiac = ['cardiac']
@@ -232,30 +238,24 @@ if __name__ == '__main__':
 
         results.append([patient, roi_score_gated, roi_score_fg, les_score_gated, les_score_fg, circle_score_gated, gated_les_area_sum])
 
-    train_circle_data = np.concatenate(train_circle_data, axis=0)
-    df_classifier_data = pd.DataFrame(train_circle_data, columns=['patient', 'Max HU', 'Centroid X', 'Centroid Y', 'Area', 'Channel'])
-    df_classifier_data['patient'] = df_classifier_data['patient'].astype(int)
-    
+
     df_score_ref = pd.read_excel('data/EXAMES/cac_score_data.xlsx')
-    # print(df_score_ref.head())
     df_score_ref['patient'] = df_score_ref['ID'].astype(int)
     df_score_ref['Escore'] = df_score_ref['Escore'].astype(float)
     
-    df_classifier_data = pd.merge(df_classifier_data, df_score_ref[['patient', 'Escore']], on='patient', how='left')
-    df_classifier_data.to_csv(f'data/EXAMES/classifier_dataset_radius={args.circle_radius}.csv', index=False)
-    
+    save_classifier_data(train_circle_data, df_score_ref)
+        
     df = pd.DataFrame(results, columns=['patient', 'ROI Gated', 'ROI Fake Gated', 'Lesion Gated', 'Lesion Fake Gated',\
         'Circle Mask Gated', 'Lesion Area Gated'], dtype=int)
-    
     df = pd.merge(df, df_score_ref[['patient', 'Escore']], on='patient', how='left')
     df = df[['patient', 'Escore', 'ROI Gated', 'Lesion Gated', 'Circle Mask Gated', 'Lesion Area Gated']]
-
-    print_avg_error(df)
     
     if args.dilate:
         df.to_csv(f'data/EXAMES/Calcium_Scores_Estimations/calcium_score_estimations_dilate_it={args.dilate_it}_dilate_k={args.dilate_kernel}.csv', index=False)
     else:
         df.to_csv('data/EXAMES/Calcium_Scores_Estimations/calcium_score_estimations.csv', index=False)
+        
+    print_avg_error(df)
 
     
     
