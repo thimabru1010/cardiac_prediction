@@ -18,7 +18,7 @@ def circumscribing_rectangle(center, radius):
     return x_min, y_min, x_max - x_min, y_max - y_min
 
 def get_partes_moles_basename(files):
-    exclude_files=['partes_moles_HeartSegs', 'partes_moles_FakeGated', 'partes_moles_FakeGated_CircleMask']
+    exclude_files=['partes_moles_HeartSegs', 'partes_moles_FakeGated_CircleMask', 'multi_label', 'multi_lesion', 'binary_lesion']
     files = [file for file in files if not any(f in file for f in exclude_files)]
     gated_exam_basename = [file for file in files if 'partes_moles_body' in file or 'mediastino' in file]
     return gated_exam_basename[0]
@@ -29,6 +29,7 @@ if __name__ == '__main__':
     
     # heart_segs = nib.load('data/EXAMES/Exames_NIFTI')
     exam_type = 'partes_moles'
+    new_img_size = (512, 512)
     for patient in tqdm(patients):
         print(patient)
         output_path = f'data/EXAMES/Exames_NIFTI/{patient}/{patient}'
@@ -81,13 +82,6 @@ if __name__ == '__main__':
         
         nifti_files = os.listdir(patient_path)
         motion_filename = get_partes_moles_basename(nifti_files)
-        # try:
-        #     # motion_filename = [file for file in nifti_files if 'partes_moles_body' in file][0]
-        #     motion_filename = get_partes_moles_basename(nifti_files)
-        # except:
-        #     print(f'partes_moles_body not found!: {patient}')
-        #     break
-        
         input_img = nib.load(os.path.join(patient_path, motion_filename))#.get_fdata()
         ct_data = input_img.get_fdata()
         
@@ -99,11 +93,21 @@ if __name__ == '__main__':
         ct_data = ct_data[y:y+h, x:x+w]
         # print(ct_data.shape)
         
-        img_size = (512, 512)
-        ct_data2 = np.zeros((img_size[0], img_size[1], ct_data.shape[2]))
+        pixel_spacing = input_img.header.get_zooms()[:3]
+        print(pixel_spacing)
+
+        gated_slice_size = 3 # mm
+        new_slice_size = int(gated_slice_size // pixel_spacing[2])
+        # grup_factor = 
+        # new_channel = int(ct_data.shape[2] * gated_slice_size // pixel_spacing[2]
+        divisible_channel = ct_data.shape[2] // new_slice_size * new_slice_size
+        print(divisible_channel)
+        ct_data = ct_data[:, :, :divisible_channel].reshape(ct_data.shape[0], ct_data.shape[1], -1, 3).mean(axis=3)
+        
+        ct_data2 = np.zeros((new_img_size[0], new_img_size[1], ct_data.shape[2]))
         for i in range(ct_data.shape[2]):
             #TODO: Apply a filter to remove motion blur
-            ct_data2[:, :, i] = cv2.resize(ct_data[:, :, i], img_size, interpolation=cv2.INTER_LANCZOS4)
+            ct_data2[:, :, i] = cv2.resize(ct_data[:, :, i], new_img_size, interpolation=cv2.INTER_LANCZOS4)
         
         # print(ct_data2.shape)
         
@@ -111,5 +115,5 @@ if __name__ == '__main__':
         new_nifti = nib.Nifti1Image(ct_data2, heart_segs_data.affine)
 
         # Save the new NIfTI image
-        nib.save(new_nifti, f'{output_path}/partes_moles_FakeGated.nii.gz')
+        nib.save(new_nifti, f'{output_path}/partes_moles_FakeGated_mean_slice=3mm.nii.gz')
         # break

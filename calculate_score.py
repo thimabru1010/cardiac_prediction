@@ -14,18 +14,24 @@ import SimpleITK as sitk
 import pandas as pd
 import argparse
 
-def save_classifier_data(train_circle_data, df_score_ref):
+def calculate_candidates_mask(exam):
+    calc_candidates_mask = exam.copy()
+    calc_candidates_mask[calc_candidates_mask < 130] = 0
+    calc_candidates_mask[calc_candidates_mask >= 130] = 1
+    return calc_candidates_mask
+            
+def save_classifier_data(train_circle_data, df_score_ref, exam_folder):
     train_circle_data = np.concatenate(train_circle_data, axis=0)
     df_classifier_data = pd.DataFrame(train_circle_data, columns=['patient', 'Max HU', 'Centroid X', 'Centroid Y', 'Area', 'Channel'])
     df_classifier_data['patient'] = df_classifier_data['patient'].astype(int)
     
     df_classifier_data = pd.merge(df_classifier_data, df_score_ref[['patient', 'Escore']], on='patient', how='left')
-    df_classifier_data.to_csv(f'data/EXAMES/classifier_dataset_radius={args.circle_radius}.csv', index=False)
+    df_classifier_data.to_csv(f'data/EXAMES/Classifiers_Dataset/{exam_folder}/classifier_dataset_radius={args.circle_radius}.csv', index=False)
         
 def print_avg_error(df):
-    df['ROI Error'] = df['Escore'] - df['ROI Gated']
-    df['Lesion Error'] = df['Escore'] - df['Lesion Gated']
-    df['Circle Mask Error'] = df['Escore'] - df['Circle Mask Gated']
+    df['ROI Error'] = df['Escore'] - df['ROI']
+    df['Lesion Error'] = df['Escore'] - df['Lesion']
+    df['Circle Mask Error'] = df['Escore'] - df['Circle Mask']
     average_roi_error = df['ROI Error'].mean()
     average_lesion_error = df['Lesion Error'].mean()
     average_circle_mask_error = df['Circle Mask Error'].mean()
@@ -35,16 +41,16 @@ def print_avg_error(df):
     print('Average Circle Mask Error:', average_circle_mask_error)
 
 def create_circle_mask(center, radius, shape):
-    circle_mask = np.zeros(shape)
+    circle_mask = np.zeros(shape[:2], dtype=np.uint8)
+    # print(circle_mask.shape)
     cv2.circle(circle_mask, center, radius=radius, color=1, thickness=-1)
-    circle_mask = np.repeat(circle_mask[:, :, np.newaxis], gated_exam.shape[2], axis=2)
+    circle_mask = np.repeat(circle_mask[:, :, np.newaxis], shape[2], axis=2)
     return circle_mask
         
 def calculate_area(mask):
     mask_tmp = mask.copy()
     mask_tmp[mask_tmp != 0] = 1
-    area_sum = mask_tmp.sum()
-    return area_sum
+    return mask_tmp.sum()
         
 def create_save_nifti(data, affine, output_path):
     new_nifti = nib.Nifti1Image(data, affine)
@@ -129,7 +135,6 @@ if __name__ == '__main__':
     argparser.add_argument('--dilate_it', type=int, default=5, help='Wheter to dilate the mask or not')
     argparser.add_argument('--circle_radius', type=int, default=120, help='Radius for the Circle Mask')
     argparser.add_argument('--partes_moles', action='store_true', help='Whether to infer partes_moles exams')
-    # argparser.add_argument('--save_path', type=str, help='Path to save the results')
     args = argparser.parse_args()
     
     root_path = args.root_path
@@ -150,15 +155,10 @@ if __name__ == '__main__':
         exclude_files = ['partes_moles_HeartSegs', 'partes_moles_FakeGated', 'partes_moles_FakeGated_CircleMask']
         keywords_partes_moles = ['partes_moles_body', 'mediastino']
         for patient in patients:
-            print()
             print(patient)
-            # patient = '180466'
-            # print('Fake Gated Agaston Score Calculation')
-            fg_exam_path = f'{root_path}/{patient}/{patient}/partes_moles_FakeGated.nii.gz'
-            # Region of Intrest of the calcified candidates
-            fg_mask_lab_path = f'{root_path}/{patient}/{patient}/partes_moles_FakeGated.nii_multi_label.nii.gz'
-            # Exacly Segmentation of the calcified regions
-            fg_mask_les_path = f'{root_path}/{patient}/{patient}/partes_moles_FakeGated.nii_multi_lesion.nii.gz'
+            fg_exam_path = f'{root_path}/{patient}/{patient}/partes_moles_FakeGated_mean_slice=3mm.nii.gz'
+            fg_mask_lab_path = f'{root_path}/{patient}/{patient}/partes_moles_FakeGated_mean_slice=3mm_multi_label.nii.gz'
+            fg_mask_les_path = f'{root_path}/{patient}/{patient}/partes_moles_FakeGated_mean_slice=3mm_multi_lesion.nii.gz'
             
             fg_exam_img = nib.load(fg_exam_path)#.get_fdata()
             fg_mask_lab_img = nib.load(fg_mask_lab_path)#.get_fdata()
@@ -168,12 +168,42 @@ if __name__ == '__main__':
             fg_mask_lab = fg_mask_lab_img.get_fdata()#.transpose(1, 2, 0)
             fg_mask_les = fg_mask_les_img.get_fdata()#.transpose(1, 2, 0)
             
-            print(fg_exam.shape)
+            calc_candidates_mask = calculate_candidates_mask(fg_exam)
+            
+            create_save_nifti(calc_candidates_mask, fg_exam_img.affine, f'{root_path}/{patient}/{patient}/partes_moles_CalciumCandidates.nii.gz')
+            
+            if args.dilate:
+                fg_mask_les = cv2.dilate(fg_mask_les, kernel, iterations=args.dilate_it)
+            
+            create_save_nifti(fg_mask_les, fg_exam_img.affine, f'{root_path}/{patient}/{patient}/partes_moles_IncreasedLesion_mask.nii.gz')
+            
+            fg_les_area_sum = calculate_area(fg_mask_les)
+            print('Fake Gated Lesion Area:', fg_les_area_sum)
             
             pixel_spacing = fg_exam_img.header.get_zooms()[:3]  # (x, y, z) spacing
+            roi_score_fg, connected_lab, _ = calculate_score(fg_exam, fg_mask_lab, pixel_spacing)
+            les_score_fg, connected_les, _ = calculate_score(fg_exam, fg_mask_les, pixel_spacing)
             
-            roi_score_fg, _, _ = calculate_score(fg_exam, fg_mask_lab, pixel_spacing)
-            les_score_fg, _, _ = calculate_score(fg_exam, fg_mask_les, pixel_spacing)
+            create_save_nifti(connected_lab, fg_exam_img.affine, f'{root_path}/{patient}/{patient}/partes_moles_ROISingleLesions_mask.nii.gz')
+            create_save_nifti(connected_les, fg_exam_img.affine, f'{root_path}/{patient}/{patient}/partes_moles_LesionSingleLesions_mask.nii.gz')
+            
+            circle_mask = create_circle_mask((fg_exam.shape[1] // 2, fg_exam.shape[0] // 2), args.circle_radius, fg_exam.shape)
+            
+            create_save_nifti(circle_mask, fg_exam_img.affine, f'{root_path}/{patient}/{patient}/partes_moles_circle_mask.nii.gz')
+            create_save_nifti(circle_mask*fg_mask_les, fg_exam_img.affine, f'{root_path}/{patient}/{patient}/partes_moles_circle_lesions_mask.nii.gz')
+            
+            circle_score_fg, conected_circle_lesions, clssf_data = calculate_score(fg_exam, circle_mask, pixel_spacing, patient)
+            create_save_nifti(conected_circle_lesions, fg_exam_img.affine, f'{root_path}/{patient}/{patient}/partes_moles_CircleSingleLesions_mask.nii.gz')
+            
+            train_circle_data.append(clssf_data)
+            
+            print('ROI Score FG:', roi_score_fg)
+            print('Lesion Score FG:', les_score_fg)
+            print('Circle Score FG:', circle_score_fg)
+            print(f'Reference Score: {df_score_ref[df_score_ref["patient"] == int(patient)]["Escore"].values[0]}')
+            
+            results.append([patient, roi_score_fg, les_score_fg, circle_score_fg, fg_les_area_sum])
+            
             
     #! Gated
     if not args.partes_moles:
@@ -182,6 +212,7 @@ if __name__ == '__main__':
         exclude_files = ['multi_label', 'multi_lesion', 'binary_lesion']
         keywords_cardiac = ['cardiac']
         for patient in patients:
+            print(patient)
             gated_exam_basename = get_basename(os.listdir(f'{root_path}/{patient}/{patient}'))
             print(gated_exam_basename)
             gated_exam_path = f'{root_path}/{patient}/{patient}/{gated_exam_basename}'
@@ -198,9 +229,7 @@ if __name__ == '__main__':
             gated_mask_les = gated_mask_les_img.get_fdata()
             gated_mask_lab = gated_mask_lab_img.get_fdata()
             
-            calc_candidates_mask = gated_exam.copy()
-            calc_candidates_mask[calc_candidates_mask < 130] = 0
-            calc_candidates_mask[calc_candidates_mask >= 130] = 1
+            calc_candidates_mask = calculate_candidates_mask(gated_exam)
             
             # Create and save a new NIfTI image from the modified data
             create_save_nifti(calc_candidates_mask, gated_exam_img.affine, f'{root_path}/{patient}/{patient}/cardiac_CalciumCandidates.nii.gz')
@@ -209,7 +238,7 @@ if __name__ == '__main__':
                 # gated_mask_lab = cv2.dilate(gated_mask_lab, kernel, iterations=args.dilate_it)
                 gated_mask_les = cv2.dilate(gated_mask_les, kernel, iterations=args.dilate_it)
             
-            create_save_nifti(gated_mask_lab, gated_exam_img.affine, f'{root_path}/{patient}/{patient}/IncreasedLesion_mask_gated.nii.gz')
+            create_save_nifti(gated_mask_les, gated_exam_img.affine, f'{root_path}/{patient}/{patient}/cardiac_IncreasedLesion_mask.nii.gz')
             
             gated_les_area_sum = calculate_area(gated_mask_les)
             print('Gated Lesion Area:', gated_les_area_sum)
@@ -218,16 +247,16 @@ if __name__ == '__main__':
             roi_score_gated, connected_lab, _ = calculate_score(gated_exam, gated_mask_lab, pixel_spacing)
             les_score_gated, connected_les, _ = calculate_score(gated_exam, gated_mask_les, pixel_spacing)
             
-            create_save_nifti(connected_lab, gated_exam_img.affine, f'{root_path}/{patient}/{patient}/ROISingleLesions_mask_gated.nii.gz')
-            create_save_nifti(connected_les, gated_exam_img.affine, f'{root_path}/{patient}/{patient}/LesionSingleLesions_mask_gated.nii.gz')
+            create_save_nifti(connected_lab, gated_exam_img.affine, f'{root_path}/{patient}/{patient}/cardiac_ROISingleLesions_mask.nii.gz')
+            create_save_nifti(connected_les, gated_exam_img.affine, f'{root_path}/{patient}/{patient}/cardiac_LesionSingleLesions_mask.nii.gz')
 
-            circle_mask = create_circle_mask((circle_mask.shape[1] // 2, circle_mask.shape[0] // 2), args.circle_radius, gated_exam.shape)
+            circle_mask = create_circle_mask((gated_exam.shape[1] // 2, gated_exam.shape[0] // 2), args.circle_radius, gated_exam.shape)
 
-            create_save_nifti(circle_mask, gated_exam_img.affine, f'{root_path}/{patient}/{patient}/circle_mask_gated.nii.gz')
-            create_save_nifti(circle_mask*gated_mask_les, gated_exam_img.affine, f'{root_path}/{patient}/{patient}/circle_lesions_mask_gated.nii.gz')
-            create_save_nifti(conected_lesions, gated_exam_img.affine, f'{root_path}/{patient}/{patient}/CircleSingleLesions_mask_gated.nii.gz')
+            create_save_nifti(circle_mask, gated_exam_img.affine, f'{root_path}/{patient}/{patient}/cardiac_circle_mask.nii.gz')
+            create_save_nifti(circle_mask*gated_mask_les, gated_exam_img.affine, f'{root_path}/{patient}/{patient}/cardiac_circle_lesions_mask.nii.gz')
             
-            circle_score_gated, conected_lesions, clssf_data = calculate_score(gated_exam, circle_mask, pixel_spacing, patient)
+            circle_score_gated, conected_circle_lesions, clssf_data = calculate_score(gated_exam, circle_mask, pixel_spacing, patient)
+            create_save_nifti(conected_circle_lesions, gated_exam_img.affine, f'{root_path}/{patient}/{patient}/cardiac_CircleSingleLesions_mask.nii.gz')
 
             train_circle_data.append(clssf_data)
             
@@ -236,16 +265,17 @@ if __name__ == '__main__':
             print('Circle Score Gated:', circle_score_gated)
             print(f'Reference Score: {df_score_ref[df_score_ref["patient"] == int(patient)]["Escore"].values[0]}')
 
-            results.append([patient, roi_score_gated, roi_score_fg, les_score_gated, les_score_fg, circle_score_gated, gated_les_area_sum])
+            results.append([patient, roi_score_gated, les_score_gated, circle_score_gated, gated_les_area_sum])
 
 
     df_score_ref = pd.read_excel('data/EXAMES/cac_score_data.xlsx')
     df_score_ref['patient'] = df_score_ref['ID'].astype(int)
     df_score_ref['Escore'] = df_score_ref['Escore'].astype(float)
     
-    save_classifier_data(train_circle_data, df_score_ref)
-        
-    df = pd.DataFrame(results, columns=['patient', 'ROI', 'Lesion Gated', 'Circle Mask', 'Lesion Area'], dtype=int)
+    save_classifier_data(train_circle_data, df_score_ref, exam_folder)
+    
+    results = np.array(results, dtype=int)
+    df = pd.DataFrame(results, columns=['patient', 'ROI', 'Lesion', 'Circle Mask', 'Lesion Area'])
     df = pd.merge(df, df_score_ref[['patient', 'Escore']], on='patient', how='left')
     df = df[['patient', 'Escore', 'ROI', 'Lesion', 'Circle Mask', 'Lesion Area']]
     

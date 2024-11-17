@@ -70,9 +70,9 @@ if __name__ == '__main__':
         
         print(df['Escore'].head())
         df['Label'] = df['Escore'].apply(lambda x: classify(x))
-        df['ROI Gated Clssf'] = df['ROI Gated'].apply(lambda x: classify(x))
-        df['Lesion Gated Clssf'] = df['Lesion Gated'].apply(lambda x: classify(x))
-        df['Circle Gated Clssf'] = df['Circle Mask Gated'].apply(lambda x: classify(x))
+        df['ROI Clssf'] = df['ROI'].apply(lambda x: classify(x))
+        df['Lesion Clssf'] = df['Lesion'].apply(lambda x: classify(x))
+        df['Circle Clssf'] = df['Circle Mask'].apply(lambda x: classify(x))
         # df['Estimated Fake Gated Clssf'] = df['Estimated Score Fake Gated'].apply(lambda x: classify(x))
         # df['Lesion Fake Gated Clssf'] = df['Lesion Fake Gated'].apply(lambda x: classify(x))
         
@@ -80,24 +80,24 @@ if __name__ == '__main__':
         print(df['Label'].value_counts())
         # 1/0
 
-        acc_roi_gated = (df['Label'] == df['ROI Gated Clssf']).sum() / len(df) *100
-        acc_lesion_gated = (df['Label'] == df['Lesion Gated Clssf']).sum() / len(df) *100
-        acc_circle_gated = (df['Label'] == df['Circle Gated Clssf']).sum() / len(df) *100
+        acc_roi_gated = (df['Label'] == df['ROI Clssf']).sum() / len(df) *100
+        acc_lesion_gated = (df['Label'] == df['Lesion Clssf']).sum() / len(df) *100
+        acc_circle_gated = (df['Label'] == df['Circle Clssf']).sum() / len(df) *100
         # accuracy_efg = (df['Label'] == df['Estimated Fake Gated Clssf']).sum() / len(df) *100
         # accuracy_dfg = (df['Label'] == df['Direct Fake Gated Clssf']).sum() / len(df) *100
 
-        print(f'Accuracy ROI Gated: {acc_roi_gated}%')
+        print(f'Accuracy ROI: {acc_roi_gated}%')
         # print(f'Accuracy Estimated Fake Gated: {accuracy_efg}%')
         # print(f'Accuracy Direct Fake Gated: {accuracy_dfg}%')
-        print(f'Accuracy Lesion Gated: {acc_lesion_gated}%')
+        print(f'Accuracy Lesion: {acc_lesion_gated}%')
         # print(f'Accuracy Circle Mask Gated: {acc_circle_gated}%')
         
 
-        f1_score_roi_gated = f1_score(df['Label'].values, df['ROI Gated Clssf'].values, average='weighted')
-        f1_score_lesion_gated = f1_score(df['Label'].values, df['Lesion Gated Clssf'].values, average='weighted')
+        f1_score_roi_gated = f1_score(df['Label'].values, df['ROI Clssf'].values, average='weighted')
+        f1_score_lesion_gated = f1_score(df['Label'].values, df['Lesion Clssf'].values, average='weighted')
         
-        print(f'F1 Score ROI Gated: {f1_score_roi_gated}')
-        print(f'F1 Score Lesion Gated: {f1_score_lesion_gated}')
+        print(f'F1 Score ROI: {f1_score_roi_gated}')
+        print(f'F1 Score Lesion: {f1_score_lesion_gated}')
         
         if max_f1 < f1_score_lesion_gated:
             max_f1 = f1_score_lesion_gated
@@ -114,12 +114,12 @@ if __name__ == '__main__':
         class_names = ['sem_risco', 'risco_intermediario', 'alto_risco']
 
         # Compute confusion matrix for ROI Gated
-        cm = confusion_matrix(df['Label'].values, df['ROI Gated Clssf'].values, normalize='true')
+        cm = confusion_matrix(df['Label'].values, df['ROI Clssf'].values, normalize='true')
         cm_df = pd.DataFrame(cm, index=class_names, columns=class_names)
         # Plot the confusion matrix
         figure = plt.figure(figsize=(9,6))
         sns.heatmap(cm_df, annot=True, cmap='Blues')
-        plt.title('ROI Gated Confusion Matrix')
+        plt.title('ROI Confusion Matrix')
         plt.ylabel('Actual Class')
         plt.xlabel('Predicted Class')
         # plt.show()
@@ -131,15 +131,15 @@ if __name__ == '__main__':
         plt.close()
 
         # Compute confusion matrix for Lesion Gated
-        cm = confusion_matrix(df['Label'].values, df['Lesion Gated Clssf'].values, normalize='true')
+        cm = confusion_matrix(df['Label'].values, df['Lesion Clssf'].values, normalize='true')
         cm_df = pd.DataFrame(cm, index=class_names, columns=class_names)
         # Plot the confusion matrix
         figure = plt.figure(figsize=(9,6))
         sns.heatmap(cm_df, annot=True, cmap='Blues')
-        plt.title('Lesion Gated Confusion Matrix')
+        plt.title('Lesion Confusion Matrix')
         plt.ylabel('Actual Class')
         plt.xlabel('Predicted Class')
-        # plt.show()
+        plt.show()
         if dilate_it is not None and dilate_k is not None:
             lesion_gated_cm_path = f'data/EXAMES/confusion_matrices/confusion_matrix_Lesion_dilated_it={dilate_it}_k={dilate_k}.png'
         else:
@@ -148,10 +148,10 @@ if __name__ == '__main__':
         plt.close()
 
         with mlflow.start_run(run_name=run_name):
-            mlflow.log_metric("ROI Gated ACC", acc_roi_gated)
-            mlflow.log_metric("Lesion Gated ACC", acc_lesion_gated)
-            mlflow.log_metric("ROI Gated F1 Score", f1_score_roi_gated)
-            mlflow.log_metric("Lesion Gated F1 Score", f1_score_lesion_gated)
+            mlflow.log_metric("ROI ACC", acc_roi_gated)
+            mlflow.log_metric("Lesion ACC", acc_lesion_gated)
+            mlflow.log_metric("ROI F1 Score", f1_score_roi_gated)
+            mlflow.log_metric("Lesion F1 Score", f1_score_lesion_gated)
             mlflow.log_artifact(roi_gated_cm_path)
             mlflow.log_artifact(lesion_gated_cm_path)
             
@@ -166,8 +166,8 @@ if __name__ == '__main__':
         # print('Classification Report:\n', report)
 
     print()
-    print(f'Best method F1: {max_f1_method} with F1 Score: {max_f1}')
-    print(f"Best method Accuracy: {max_acc_method} with Accuracy: {max_acc}")
+    print(f'Best method F1: {max_f1_method} - with F1 Score: {max_f1}')
+    print(f"Best method Accuracy: {max_acc_method} - with Accuracy: {max_acc}")
     # print('Circle Gated Clssf')
     # # Alternatively, print classification report
     # report = classification_report(df['Label'].values, df['Circle Gated Clssf'].values, target_names=class_names)

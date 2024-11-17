@@ -20,10 +20,10 @@ if __name__ == '__main__':
         patient = '180132'
         print(patient)
         patient_path = os.path.join(root_path, patient)
-        output_path = os.path.join('data/EXAMES/Exames_NIFTI2', patient, patient)
+        output_path = os.path.join('data/EXAMES/Exames_NIFTI', patient, patient)
         os.makedirs(output_path, exist_ok=True)
         patient_path = os.path.join(root_path, patient, patient)
-        dicom2nifti.convert_directory(patient_path, output_path)
+        # dicom2nifti.convert_directory(patient_path, output_path)
         try:
             dicom2nifti.convert_directory(patient_path, output_path)
         except Exception as e:
