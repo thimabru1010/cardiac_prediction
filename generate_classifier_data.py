@@ -29,6 +29,17 @@ def get_basename(files):
     # gated_exam_basename.remove(exclusion_files[2])
     return gated_exam_basename[0]
 
+def get_basename(files, exclude_files, keywords):
+    # Exclude files based on the exclude_files list
+    # files = [file for file in files if not any(f in file for f in exclude_files)]
+    files = [file for file in files if all(f in file for f in exclude_files)]
+
+    if gated_exam_basename := [
+        file for file in files if any(keyword in file for keyword in keywords)]:
+        return gated_exam_basename[0]
+    else:
+        raise ValueError("No matching files found.")
+    
 def density_factor(max_HU):
     if max_HU >= 130 and max_HU < 200:
         return 1
@@ -39,7 +50,7 @@ def density_factor(max_HU):
     elif max_HU >= 400:
         return 4
 
-def calculate_score(exam, mask, pixel_spacing, pacient_id=None):
+def calculate_score(exam, mask, pixel_spacing, patient_id=None):
     agaston_score = 0
     max_cac = 0
     # print(mask.shape, exam.shape)
@@ -83,7 +94,7 @@ def calculate_score(exam, mask, pixel_spacing, pacient_id=None):
             # print(area, density_factor(max_HU), max_HU)
             agaston_score += area * density_factor(max_HU)
             
-            classification_data.append([pacient_id, max_HU, centroid[0], centroid[1], area, channel])
+            classification_data.append([patient_id, max_HU, centroid[0], centroid[1], area, channel])
     # print('Max CAC:', max_cac)
     # print(len(classification_data))
     # 1/0
@@ -93,42 +104,47 @@ if __name__=='__main__':
     argparser = argparse.ArgumentParser(description='Calculate Agaston Score')
     argparser.add_argument('--root_path', type=str, default='data/EXAMES/Exames_NIFTI', help='Root path of the exams')
     argparser.add_argument('--circle_radius', type=int, default=120, help='Radius for the Circle Mask')
+    argparser.add_argument('--fake_gated', action='store_true', help='Use the fake gated exams')
     # argparser.add_argument('--save_path', type=str, help='Path to save the results')
     args = argparser.parse_args()
     
     root_path = args.root_path
     
     df_score_ref = pd.read_excel('data/EXAMES/cac_score_data.xlsx')
-    df_score_ref['Pacient'] = df_score_ref['ID'].astype(int)
+    df_score_ref['patient'] = df_score_ref['ID'].astype(int)
     df_score_ref['Escore'] = df_score_ref['Escore'].astype(float)
     
-    pacients = os.listdir(root_path)
+    patients = os.listdir(root_path)
     results = []
     train_circle_data = []
     
-    for pacient in pacients:
-        # print(pacient)
-        gated_exam_basename = get_basename(os.listdir(f'{root_path}/{pacient}/{pacient}'))
-        print(pacient, gated_exam_basename)
-        gated_exam_path = f'{root_path}/{pacient}/{pacient}/{gated_exam_basename}'
+    for patient in patients:
+        # print(patient)
+        if not args.fake_gated:
+            exclude_files = ['multi_label', 'multi_lesion', 'binary_lesion']
+            keywords_cardiac = ['cardiac']
+            exam_basename = get_basename(os.listdir(f'{root_path}/{patient}/{patient}'), exclude_files, keywords_cardiac)
+            exam_path = f'{root_path}/{patient}/{patient}/{exam_basename}'
+        else:
+            exam_path = f'{root_path}/{patient}/{patient}/partes_moles_FakeGated_mean_slice=3mm.nii.gz'
         
         # print(gated_exam_path)
-        gated_exam_img = nib.load(gated_exam_path)#.get_fdata()
+        exam_img = nib.load(exam_path)#.get_fdata()
         
         # ct_data = gated_exam_img.get_fdata()
-        gated_exam = gated_exam_img.get_fdata()
+        exam = exam_img.get_fdata()
         
-        circle_mask = np.zeros(gated_exam.shape[:2])
+        circle_mask = np.zeros(exam.shape[:2])
         # circle_mask = np.ones(gated_exam.shape[:2])
         circle_mask = cv2.circle(circle_mask, (circle_mask.shape[1] // 2, circle_mask.shape[0] // 2), args.circle_radius, 1, -1)
-        circle_mask = np.repeat(circle_mask[:, :, np.newaxis], gated_exam.shape[2], axis=2)
+        circle_mask = np.repeat(circle_mask[:, :, np.newaxis], exam.shape[2], axis=2)
         
-        pixel_spacing = gated_exam_img.header.get_zooms()[:3]
-        circle_score_gated, conected_lesions, clssf_data = calculate_score(gated_exam, circle_mask, pixel_spacing, pacient)
+        pixel_spacing = exam_img.header.get_zooms()[:3]
+        circle_score_gated, conected_lesions, clssf_data = calculate_score(exam, circle_mask, pixel_spacing, patient)
         train_circle_data.append(clssf_data)
         
     train_circle_data = np.concatenate(train_circle_data, axis=0)
-    df_classifier_data = pd.DataFrame(train_circle_data, columns=['Pacient', 'Max HU', 'Centroid X', 'Centroid Y', 'Area', 'Channel'])
-    df_classifier_data['Pacient'] = df_classifier_data['Pacient'].astype(int)
-    df_classifier_data['Escore'] = pd.merge(df_classifier_data, df_score_ref, on='Pacient', how='left')['Escore']
+    df_classifier_data = pd.DataFrame(train_circle_data, columns=['patient', 'Max HU', 'Centroid X', 'Centroid Y', 'Area', 'Channel'])
+    df_classifier_data['patient'] = df_classifier_data['patient'].astype(int)
+    df_classifier_data['Escore'] = pd.merge(df_classifier_data, df_score_ref, on='patient', how='left')['Escore']
     df_classifier_data.to_csv(f'data/EXAMES/classifier_dataset_radius={args.circle_radius}.csv', index=False)
