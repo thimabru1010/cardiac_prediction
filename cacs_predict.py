@@ -60,7 +60,8 @@ def main(args):
         if args.partes_moles:
             print('Inferring partes_moles')
             # basename = get_partes_moles_basename(os.listdir(os.path.join(data_dir, patient, patient)))
-            basename = 'partes_moles_FakeGated_mean_slice=3mm.nii.gz'
+            # basename = 'partes_moles_FakeGated_mean_slice=3mm.nii.gz'
+            basename = 'partes_moles_FakeGated_avg_slices=4.nii.gz'
             save_filename = basename.split('.')[0]
         print(basename)
         # filename = os.path.splitext(basename)[0]

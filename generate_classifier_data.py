@@ -14,26 +14,25 @@ import SimpleITK as sitk
 import pandas as pd
 import argparse
 
-def get_basename(files):
-    # Exclude the multi_label, multi_lesion and binary_lesion files with these names inside the list
-    exclusion_names=['multi_label', 'multi_lesion', 'binary_lesion', 'cardiac_IncreasedMask', 'HeartSegs', 'cardiac_CalciumCandidates']
-    files = [
-    file 
-    for file in files 
-    if not any(f in file for f in exclusion_names)
-    ]
-    gated_exam_basename = [file for file in files if 'cardiac' in file]
-    # exclusion_files = [file for file in gated_exam_basename if any(f in file for f in exclusion_names)]
-    # gated_exam_basename.remove(exclusion_files[0])
-    # gated_exam_basename.remove(exclusion_files[1])
-    # gated_exam_basename.remove(exclusion_files[2])
-    return gated_exam_basename[0]
+# def get_basename(files):
+#     # Exclude the multi_label, multi_lesion and binary_lesion files with these names inside the list
+#     exclusion_names=['multi_label', 'multi_lesion', 'binary_lesion', 'cardiac_IncreasedMask', 'HeartSegs', 'cardiac_CalciumCandidates']
+#     files = [
+#     file 
+#     for file in files 
+#     if not any(f in file for f in exclusion_names)
+#     ]
+#     gated_exam_basename = [file for file in files if 'cardiac' in file]
+#     # exclusion_files = [file for file in gated_exam_basename if any(f in file for f in exclusion_names)]
+#     # gated_exam_basename.remove(exclusion_files[0])
+#     # gated_exam_basename.remove(exclusion_files[1])
+#     # gated_exam_basename.remove(exclusion_files[2])
+#     return gated_exam_basename[0]
 
 def get_basename(files, exclude_files, keywords):
     # Exclude files based on the exclude_files list
-    # files = [file for file in files if not any(f in file for f in exclude_files)]
-    files = [file for file in files if all(f in file for f in exclude_files)]
-
+    files = [file for file in files if not any(f in file for f in exclude_files)]
+    # files = [file for file in files if all(f in file for f in exclude_files)]
     if gated_exam_basename := [
         file for file in files if any(keyword in file for keyword in keywords)]:
         return gated_exam_basename[0]
@@ -89,15 +88,15 @@ def calculate_score(exam, mask, pixel_spacing, patient_id=None):
             if max_HU > max_cac:
                 max_cac = max_HU
             # Area in mm^2
-            area = calcified_candidates[calcified_candidates != 0].shape[0] * pixel_spacing[0] * pixel_spacing[1]
+            area_pixels = calcified_candidates[calcified_candidates != 0].shape[0]
+            pixel_space = pixel_spacing[0] * pixel_spacing[1]
+            area = area_pixels * pixel_space
             # print(area)
             # print(area, density_factor(max_HU), max_HU)
             agaston_score += area * density_factor(max_HU)
             
-            classification_data.append([patient_id, max_HU, centroid[0], centroid[1], area, channel])
-    # print('Max CAC:', max_cac)
-    # print(len(classification_data))
-    # 1/0
+            classification_data.append([patient_id, max_HU, centroid[0], centroid[1], area_pixels, pixel_space, channel])
+            
     return agaston_score, conected_lesions, np.array(classification_data)
 
 if __name__=='__main__':
@@ -118,21 +117,33 @@ if __name__=='__main__':
     results = []
     train_circle_data = []
     
-    for patient in patients:
+    number_slices = []
+    
+    for patient in tqdm(patients):
         # print(patient)
+        # patient = '74657'
         if not args.fake_gated:
-            exclude_files = ['multi_label', 'multi_lesion', 'binary_lesion']
+            exclude_files = ['multi_label', 'multi_lesion', 'binary_lesion', 'cardiac_CalciumCandidates_Mask']
             keywords_cardiac = ['cardiac']
+            # print(os.listdir(f'{root_path}/{patient}/{patient}'))
             exam_basename = get_basename(os.listdir(f'{root_path}/{patient}/{patient}'), exclude_files, keywords_cardiac)
+            # print(exam_basename)
             exam_path = f'{root_path}/{patient}/{patient}/{exam_basename}'
+            exam_type = 'Gated'
         else:
-            exam_path = f'{root_path}/{patient}/{patient}/partes_moles_FakeGated_mean_slice=3mm.nii.gz'
+            # exam_path = f'{root_path}/{patient}/{patient}/partes_moles_FakeGated_mean_slice=3mm.nii.gz'
+            exam_path = f'{root_path}/{patient}/{patient}/partes_moles_FakeGated_avg_slices=4.nii.gz'
+            exam_type = 'Fake Gated_avg=4'
         
         # print(gated_exam_path)
         exam_img = nib.load(exam_path)#.get_fdata()
         
+        
         # ct_data = gated_exam_img.get_fdata()
         exam = exam_img.get_fdata()
+        print(exam.shape)
+        
+        number_slices.append([patient, exam.shape[2]])
         
         circle_mask = np.zeros(exam.shape[:2])
         # circle_mask = np.ones(gated_exam.shape[:2])
@@ -141,10 +152,17 @@ if __name__=='__main__':
         
         pixel_spacing = exam_img.header.get_zooms()[:3]
         circle_score_gated, conected_lesions, clssf_data = calculate_score(exam, circle_mask, pixel_spacing, patient)
+        # print(clssf_data)
+        if clssf_data.shape[0] == 0:
+            continue
         train_circle_data.append(clssf_data)
         
+    # print(train_circle_data)
     train_circle_data = np.concatenate(train_circle_data, axis=0)
-    df_classifier_data = pd.DataFrame(train_circle_data, columns=['patient', 'Max HU', 'Centroid X', 'Centroid Y', 'Area', 'Channel'])
+    df_classifier_data = pd.DataFrame(train_circle_data, columns=['patient', 'Max HU', 'Centroid X', 'Centroid Y', 'Area Pixels', 'Pixel Space', 'Channel'])
     df_classifier_data['patient'] = df_classifier_data['patient'].astype(int)
     df_classifier_data['Escore'] = pd.merge(df_classifier_data, df_score_ref, on='patient', how='left')['Escore']
     df_classifier_data.to_csv(f'data/EXAMES/classifier_dataset_radius={args.circle_radius}.csv', index=False)
+    
+    df_slices = pd.DataFrame(number_slices, columns=['patient', 'Number Slices'])
+    df_slices.to_csv(f'data/EXAMES/number_slices_{exam_type}.csv', index=False)
