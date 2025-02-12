@@ -38,3 +38,4 @@ def calculate_area(mask, axis=2):
 def create_save_nifti(data, affine, output_path):
     new_nifti = nib.Nifti1Image(data, affine)
     nib.save(new_nifti, output_path)
+    

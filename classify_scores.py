@@ -9,6 +9,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, roc_auc_score
+import warnings
 
 def plot_tpr_tnr_curve(y_true, y_scores, title="TPR vs TNR Curve"):
     """
@@ -38,6 +39,7 @@ def plot_tpr_tnr_curve(y_true, y_scores, title="TPR vs TNR Curve"):
     
 def linear_corr_plot(valores_reais, valores_estimados, title="Linear Correlation Plot", save_path=None):
     # Trace a melhor reta que se ajusta aos dados
+    print(valores_estimados)
     slope, intercept = np.polyfit(valores_estimados, valores_reais, 1)
     
     max_val = max(max(valores_reais), max(valores_estimados))
@@ -144,6 +146,7 @@ def get_integers_from_string(s, key):
     return integers
                 
 if __name__ == '__main__':
+    warnings.simplefilter(action='ignore', category=FutureWarning)
     argparser = argparse.ArgumentParser(description='Classify the calcium scores')
     # argparser.add_argument('--scores_path', type=str, default='data/EXAMES/Calcium_Scores_Estimations/calcium_score_estimations.csv', help='CSV filepath with the calcium scores')
     argparser.add_argument('--folder_path', type=str, default='data/EXAMES/Calcium_Scores_Estimations/', help='Folder path to load csv files')
@@ -163,6 +166,7 @@ if __name__ == '__main__':
     # files = ['calcium_score_estimations_dilate_it=5_dilate_k=7.csv']
     max_f1 = 0
     max_acc = 0
+    max_f1_error = 0
     max_f1_method = ''
     max_acc_method = ''
     best_filename = ''
@@ -193,32 +197,27 @@ if __name__ == '__main__':
         df.columns = df.columns.str.strip()
         
         # Change column names
-        df.rename(columns={'Pacient': 'Patient', 'ROI Gated': 'ROI', 'Lesion Gated': 'Lesion', 'Circle Mask Gated': 'Circle Mask'}, inplace=True)
+        df.rename(columns={'Pacient': 'Patient', 'ROI Gated': 'ROI', 'Lesion Gated': 'Lesion', 'Heart Mask Gated': 'Heart Mask'}, inplace=True)
         
         print(df['Escore'].head())
+        print(df.columns)
         df['Label'] = df['Escore'].apply(lambda x: classify(x, args.clssf_mode))
         df['Lesion Clssf'] = df['Lesion'].apply(lambda x: classify(x, args.clssf_mode))
-        df['Circle Clssf'] = df['Circle Mask'].apply(lambda x: classify(x, args.clssf_mode))
-        # df['Estimated Fake Gated Clssf'] = df['Estimated Score Fake Gated'].apply(lambda x: classify(x))
-        # df['Lesion Fake Gated Clssf'] = df['Lesion Fake Gated'].apply(lambda x: classify(x))
+        df['Heart Clssf'] = df['Heart Mask'].apply(lambda x: classify(x, args.clssf_mode))
         
         # Count the number of samples in each class
         print(df['Label'].value_counts())
 
         acc_lesion_gated = (df['Label'] == df['Lesion Clssf']).sum() / len(df)
-        acc_circle_gated = (df['Label'] == df['Circle Clssf']).sum() / len(df)
-        # accuracy_efg = (df['Label'] == df['Estimated Fake Gated Clssf']).sum() / len(df) *100
-        # accuracy_dfg = (df['Label'] == df['Direct Fake Gated Clssf']).sum() / len(df) *100
-
-        print(f'Accuracy Lesion: {acc_lesion_gated}')
-        # print(f'Accuracy Circle Mask Gated: {acc_circle_gated}%')
-        
+        acc_heart_gated = (df['Label'] == df['Heart Clssf']).sum() / len(df)
         f1_score_lesion_gated = f1_score(df['Label'].values, df['Lesion Clssf'].values, average='weighted')
-        # print(f1_score_lesion_gated)
-        # f1_score_lesion_gated = f1_score_lesion_gated[5]
-        print(f'F1 Score Lesion: {f1_score_lesion_gated}')
+        avg_error = df['Lesion Error'].mean()
         
-        metrics.append([run_name, acc_lesion_gated, f1_score_lesion_gated])
+        print(f'Accuracy Lesion: {acc_lesion_gated}')
+        print(f'F1 Score Lesion: {f1_score_lesion_gated}')
+        print(f'Avg Error: {avg_error}')    
+        
+        metrics.append([run_name, acc_lesion_gated, f1_score_lesion_gated, avg_error])
         #! Confusion Matrices
         # Define class names
         # class_names = ['No Risk', 'Risk 1', 'Risk 2', 'Risk 3', 'Risk 4', 'Risk 5']
@@ -260,12 +259,14 @@ if __name__ == '__main__':
         if max_f1 < f1_score_lesion_gated:
             max_f1 = f1_score_lesion_gated
             max_f1_method = run_name
+            max_f1_error = avg_error
             print(f'Max F1 Score: {max_f1}')
             best_filename = filename
             best_sensitivity = Sensitivity
             best_specificity = Specificity
             max_acc = acc_lesion_gated
-            print(f'Max Accuracy: {max_acc}')
+            print(f'Max F1 Accuracy: {max_acc}')
+            print(f'Max F1 Avg Error: {max_f1_error}')
         
         with mlflow.start_run(run_name=run_name):
             mlflow.set_tag("exam_type", f"{exam_type}")
@@ -288,11 +289,10 @@ if __name__ == '__main__':
     filename = best_filename
     print(f"Best filename: {filename}")
     scores_path = os.path.join(folder_path, filename)
-    print(scores_path)
     df = pd.read_csv(scores_path)
     df.columns = df.columns.str.strip()
     # Change column names
-    df.rename(columns={'Pacient': 'Patient', 'ROI Gated': 'ROI', 'Lesion Gated': 'Lesion', 'Circle Mask Gated': 'Circle Mask'}, inplace=True)
+    df.rename(columns={'Pacient': 'Patient', 'ROI Gated': 'ROI', 'Lesion Gated': 'Lesion', 'Heart Mask Gated': 'Heart Mask'}, inplace=True)
     
     # Calculates linear correlation between the scores
     # correlation = np.corrcoef(df['Escore'], df['Lesion'])[0, 1]
@@ -304,8 +304,6 @@ if __name__ == '__main__':
     bland_altman_plot(df['Escore'], df['Lesion'], title=f'{exam_type} {avg_str} {max_f1_method} - Bland-Altman Plot',\
         save_path=f'data/EXAMES/Experiments_Metrics/{exam_type}/{avg_str}/{threshold}')
 
-    print(df[['Escore', 'Lesion']].head())
-
     df_best = pd.read_csv(os.path.join(folder_path, best_filename))
     sns.histplot(df_best['Lesion Error'], bins=50)
     plt.title(f'{exam_type} {avg_str} {max_f1_method} - Error Histogram')
@@ -315,8 +313,8 @@ if __name__ == '__main__':
     plt.close()
     
     
-    # print(metrics)
-    df_metrics = pd.DataFrame(metrics, columns=['Method', 'Accuracy', 'F1 Score'])
+    #! Plot ACC
+    df_metrics = pd.DataFrame(metrics, columns=['Method', 'Accuracy', 'F1 Score', 'Error'])
     # Define a color palette
     palette = sns.color_palette("husl", len(df_metrics))
     fig = plt.figure(figsize=(9,6))
@@ -324,16 +322,15 @@ if __name__ == '__main__':
     plt.title(f'{exam_type} {avg_str} - Accuracy Metrics')
     plt.xticks(rotation=45)
     plt.tight_layout()
-    
     # Make the best method bold on the x-axis
     for label in ax.get_xticklabels():
         if label.get_text() == max_acc_method:
             label.set_fontweight('bold')
-        
     plt.savefig(os.path.join(exp_root_path, 'accuracy_metrics.png'), dpi=300)
     plt.show()
     plt.close()
     
+    #! Plot F1 Score
     fig = plt.figure(figsize=(9,6))
     ax = sns.barplot(x='Method', y='F1 Score', data=df_metrics, palette=palette, hue='Method', legend=False)
     plt.title(f'{exam_type} {avg_str} - F1 Score Metrics')
@@ -342,13 +339,22 @@ if __name__ == '__main__':
     # Make the best method bold on the x-axis
     for label in ax.get_xticklabels():
         if label.get_text() == max_f1_method:
-            label.set_fontweight('bold')
-        
+            label.set_fontweight('bold')     
     plt.savefig(os.path.join(exp_root_path, 'f1_metrics.png'), dpi=300)
     plt.show()
     plt.close()
     
-    # print('Circle Gated Clssf')
-    # # Alternatively, print classification report
-    # report = classification_report(df['Label'].values, df['Circle Gated Clssf'].values, target_names=class_names)
-    # print('Classification Report:\n', report)
+    #! Plot Avg Error
+    # Plot the average error per method in a barplot
+    fig = plt.figure(figsize=(9,6))
+    ax = sns.barplot(x='Method', y='Error', data=df_metrics, palette=palette, hue='Method', legend=False)
+    plt.title(f'{exam_type} {avg_str} - Average Error Metrics')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    # Make the best method bold on the x-axis
+    for label in ax.get_xticklabels():
+        if label.get_text() == max_f1_method:
+            label.set_fontweight('bold')
+    plt.savefig(os.path.join(exp_root_path, 'error_metrics.png'), dpi=300)
+    plt.show()
+    plt.close()
