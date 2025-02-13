@@ -136,7 +136,6 @@ if __name__ == '__main__':
     # argparser.add_argument('--avg3', action='store_true', help='Whether to use partes_moles exams with 3mm slice thickness')
     argparser.add_argument('--avg', type=int, default=0, help='Number of slices to average')
     argparser.add_argument('--cac_th', type=int, default=130, help='Calcification Threshold in HU')
-    argparser.add_argument('--seg_model', type=str, default='lesion', choices=['artery', 'lesion'], help='Segmentation model to use')
     args = argparser.parse_args()
     
     root_path = args.root_path
@@ -173,7 +172,6 @@ if __name__ == '__main__':
                 partes_moles_basename = 'partes_moles_FakeGated_avg_slices=4'
                 partes_moles_heart_filename = 'partes_moles_HeartSegs_FakeGated_avg_slices=4.nii.gz'
                 partes_moles_bones_filename = 'partes_moles_BonesSegs_FakeGated_avg_slices=4.nii.gz'
-                partes_moles_coronary_arteries_filename = 'partes_moles_FakeGated_avg_slices=4_CoronaryArteries.nii.gz'
                 avg_str = 'avg=4'
             elif args.avg == 3:
                 partes_moles_basename = 'partes_moles_FakeGated_mean_slice=3mm'
@@ -192,10 +190,7 @@ if __name__ == '__main__':
                 continue
             
             fg_exam_path = f'{root_path}/{patient}/{patient}/{partes_moles_basename}.nii.gz'
-            if args.seg_model == 'artery':
-                fg_mask_les_path = f'{root_path}/{patient}/{patient}/{partes_moles_coronary_arteries_filename}'
-            else:
-                fg_mask_les_path = f'{root_path}/{patient}/{patient}/{partes_moles_basename}_multi_lesion.nii.gz'
+            fg_mask_les_path = f'{root_path}/{patient}/{patient}/{partes_moles_basename}_multi_lesion.nii.gz'
             # fg_heart_mask_path = f'{root_path}/{patient}/{patient}/{partes_moles_heart_filename}'
             fg_bones_mask_path = f'{root_path}/{patient}/{patient}/{partes_moles_bones_filename}'
             
@@ -327,7 +322,7 @@ if __name__ == '__main__':
     
     df = calc_avg_error(df)
     
-    cac_estimations_path = f'data/EXAMES/Calcium_Scores_Estimations/{exam_folder}/{avg_str}/{cac_th}/{args.seg_model}'
+    cac_estimations_path = f'data/EXAMES/Calcium_Scores_Estimations/{exam_folder}/{avg_str}/{cac_th}'
     if not os.path.exists(cac_estimations_path):
         os.makedirs(cac_estimations_path)
             

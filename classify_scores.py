@@ -39,7 +39,6 @@ def plot_tpr_tnr_curve(y_true, y_scores, title="TPR vs TNR Curve"):
     
 def linear_corr_plot(valores_reais, valores_estimados, title="Linear Correlation Plot", save_path=None):
     # Trace a melhor reta que se ajusta aos dados
-    print(valores_estimados)
     slope, intercept = np.polyfit(valores_estimados, valores_reais, 1)
     
     max_val = max(max(valores_reais), max(valores_estimados))
@@ -294,10 +293,6 @@ if __name__ == '__main__':
     # Change column names
     df.rename(columns={'Pacient': 'Patient', 'ROI Gated': 'ROI', 'Lesion Gated': 'Lesion', 'Heart Mask Gated': 'Heart Mask'}, inplace=True)
     
-    # Calculates linear correlation between the scores
-    # correlation = np.corrcoef(df['Escore'], df['Lesion'])[0, 1]
-    # print(f'Correlation: {correlation}')
-    
     linear_corr_plot(df['Escore'], df['Lesion'], title=f'{exam_type} {avg_str} {max_f1_method} ',\
         save_path=f'data/EXAMES/Experiments_Metrics/{exam_type}/{avg_str}/{threshold}')
     
@@ -311,7 +306,6 @@ if __name__ == '__main__':
     plt.savefig(os.path.join(exp_root_path, 'error_histogram.png'), dpi=300)
     plt.show()
     plt.close()
-    
     
     #! Plot ACC
     df_metrics = pd.DataFrame(metrics, columns=['Method', 'Accuracy', 'F1 Score', 'Error'])
