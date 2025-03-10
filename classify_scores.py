@@ -198,14 +198,9 @@ if __name__ == '__main__':
         # Change column names
         df.rename(columns={'Pacient': 'Patient', 'ROI Gated': 'ROI', 'Lesion Gated': 'Lesion', 'Heart Mask Gated': 'Heart Mask'}, inplace=True)
         
-        print(df['Escore'].head())
-        print(df.columns)
         df['Label'] = df['Escore'].apply(lambda x: classify(x, args.clssf_mode))
         df['Lesion Clssf'] = df['Lesion'].apply(lambda x: classify(x, args.clssf_mode))
         df['Heart Clssf'] = df['Heart Mask'].apply(lambda x: classify(x, args.clssf_mode))
-        
-        # Count the number of samples in each class
-        print(df['Label'].value_counts())
 
         acc_lesion_gated = (df['Label'] == df['Lesion Clssf']).sum() / len(df)
         acc_heart_gated = (df['Label'] == df['Heart Clssf']).sum() / len(df)

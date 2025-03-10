@@ -46,7 +46,6 @@ if __name__ == '__main__':
     root_path = 'data/EXAMES/Exames_NIFTI'
     patients = os.listdir(root_path)
     
-    # heart_segs = nib.load('data/EXAMES/Exames_NIFTI')
     exam_type = 'partes_moles'
     new_img_size = (512, 512)
     blur_metrics = []
@@ -60,27 +59,24 @@ if __name__ == '__main__':
             
         output_path = f'data/EXAMES/Exames_NIFTI/{patient}/{patient}'
         patient_path = os.path.join(root_path, patient, patient)
-        # heart_segs_data = nib.load(f'data/EXAMES/Exames_NIFTI/{patient}/{patient}/partes_moles_HeartSegs.nii.gz')
         heart_segs_data = nib.load(f'data/EXAMES/Exames_NIFTI/{patient}/{patient}/partes_moles_HeartSegs.nii.gz')
         bones_segs_data = nib.load(f'data/EXAMES/Exames_NIFTI/{patient}/{patient}/partes_moles_BonesSegs.nii.gz')
-        # ribs_segs_data = nib.load(f'data/EXAMES/Exames_NIFTI/{patient}/{patient}/partes_moles_RibsSegs.nii.gz')
-        # vertebral_segs_data = nib.load(f'data/EXAMES/Exames_NIFTI/{patient}/{patient}/partes_moles_VertebraSegs.nii.gz')
+
         
         heart_mask = heart_segs_data.get_fdata()
         bones_mask = bones_segs_data.get_fdata()
-        # ribs_mask = ribs_segs_data.get_fdata()
-        # vertebral_mask = vertebral_segs_data.get_fdata()
+
         
         if heart_mask[heart_mask != 0].shape[0] == 0:
             print(f'No heart mask found in {patient}')
             continue
         heart_mask[heart_mask != 0] = 1
         
-        cardio_data = heart_mask.copy()
+        # heart_mask = heart_mask.copy()
         # Get the slice with the maximum area
-        count_area = np.sum(cardio_data, axis=(0, 1))
+        count_area = np.sum(heart_mask, axis=(0, 1))
         max_index = np.argmax(count_area)
-        max_slice = cardio_data[:, :, max_index]
+        max_slice = heart_mask[:, :, max_index]
         coordinates = np.argwhere(max_slice)
 
         # Calculate the centroid from the Total Segmentator Heart Mask
@@ -97,13 +93,15 @@ if __name__ == '__main__':
         x, y, w, h = rect
         
         # repeate circle mask for all slices
-        circle_mask = np.repeat(circle_mask[:, :, np.newaxis], cardio_data.shape[2], axis=2)
+        circle_mask = np.repeat(circle_mask[:, :, np.newaxis], heart_mask.shape[2], axis=2)
 
         # Save the new NIfTI image
         create_save_nifti(circle_mask, heart_segs_data.affine, f'{output_path}/partes_moles_FakeGated_CircleMask.nii.gz')
         
         nifti_files = os.listdir(patient_path)
         motion_filename = get_partes_moles_basename(nifti_files)
+        print(f"Processing {motion_filename} - Patient {patient}")
+        
         input_img = nib.load(os.path.join(patient_path, motion_filename))#.get_fdata()
         ct_data = input_img.get_fdata()
         print('Original shape:', ct_data.shape)
@@ -111,66 +109,57 @@ if __name__ == '__main__':
         min_value = ct_data.min()
         ct_data = ct_data * circle_mask
         ct_data[circle_mask == 0] = min_value
-        # print(ct_data.max())
         
         ct_data = ct_data[y:y+h, x:x+w]
-        cardio_data = cardio_data[y:y+h, x:x+w]
+        heart_mask = heart_mask[y:y+h, x:x+w]
         bones_mask = bones_mask[y:y+h, x:x+w]
-        # ribs_mask = ribs_mask[y:y+h, x:x+w]
-        # vertebral_mask = vertebral_mask[y:y+h, x:x+w]
         
-        cardio_data_upsampled = upsample_fill_mask(cardio_data, new_img_size)
-        bones_mask_upsampled = upsample_mask(bones_mask, new_img_size)
-        # ribs_mask_upsampled = upsample_fill_mask(ribs_mask, new_img_size)
-        # vertebral_mask_upsampled = upsample_fill_mask(vertebral_mask, new_img_size)
-            
-        create_save_nifti(cardio_data_upsampled, heart_segs_data.affine, f'{output_path}/partes_moles_HeartSegs_FakeGated.nii.gz')
-        create_save_nifti(bones_mask_upsampled, bones_segs_data.affine, f'{output_path}/partes_moles_BonesSegs_FakeGated.nii.gz')
-        # create_save_nifti(ribs_mask_upsampled, ribs_segs_data.affine, f'{output_path}/partes_moles_RibsSegs_FakeGated.nii.gz')
-        # create_save_nifti(vertebral_mask_upsampled, vertebral_segs_data.affine, f'{output_path}/partes_moles_VertebralSegs_FakeGated.nii.gz')
-        
-        print(f'{output_path}/partes_moles_HeartSegs_FakeGated.nii.gz')
-        print(f'{output_path}/partes_moles_BonesSegs_FakeGated.nii.gz')
-        # print(f'{output_path}/partes_moles_RibsSegs_FakeGated.nii.gz')
-        # print(f'{output_path}/partes_moles_VertebralSegs_FakeGated.nii.gz')
-        
-        # Reduce the size of channels the image by interpolation
-        ct_data = zoom(ct_data, dim_scale_factors, order=3)
-        cardio_data = zoom(cardio_data, dim_scale_factors, order=0, mode='nearest')
-        bones_mask = zoom(bones_mask, dim_scale_factors, order=0, mode='nearest')
-        # ribs_mask = zoom(ribs_mask, dim_scale_factors, order=0, mode='nearest')
-        # vertebral_mask = zoom(vertebral_mask, dim_scale_factors, order=0, mode='nearest')
-        
-        print('Reduced shape Exam:', ct_data.shape)
-        print('Reduced shape Mask:', cardio_data.shape)
-        print('Reduced shape Bones:', bones_mask.shape)
-        # print('Reduced shape Ribs:', ribs_mask.shape)
-        # print('Reduced shape Vertebra:', vertebral_mask.shape)
-        
-        cardio_data[cardio_data > 0] = 1
-        # ribs_mask[ribs_mask > 0] = 1
-        # vertebral_mask[vertebral_mask > 0] = 1
-        bones_mask[bones_mask > 0] = 1
-        
+        # heart_mask_upsampled = upsample_fill_mask(heart_mask, new_img_size)
         ct_data_upsampled = np.zeros((new_img_size[0], new_img_size[1], ct_data.shape[2]))
         for i in range(ct_data.shape[2]):
             ct_data_upsampled[:, :, i] = cv2.resize(ct_data[:, :, i], new_img_size, interpolation=cv2.INTER_NEAREST)
+            
+        bones_mask_upsampled = upsample_mask(bones_mask, new_img_size)
+        heart_mask_upsampled = upsample_mask(heart_mask, new_img_size)
         
-        cardio_data = upsample_fill_mask(cardio_data, new_img_size)
-        bones_mask = upsample_mask(bones_mask, new_img_size)
-        # ribs_mask = upsample_fill_mask(ribs_mask, new_img_size)
-        # vertebral_mask = upsample_fill_mask(vertebral_mask, new_img_size)
+        ct_data_no_bones = ct_data_upsampled.copy()
+        ct_data_no_bones[bones_mask_upsampled > 0] = 0
+        create_save_nifti(ct_data_no_bones, heart_segs_data.affine, f'{output_path}/partes_moles_FakeGated_no_bones.nii.gz')
+        create_save_nifti(ct_data_upsampled, heart_segs_data.affine, f'{output_path}/partes_moles_FakeGated.nii.gz')
+        create_save_nifti(bones_mask_upsampled, bones_segs_data.affine, f'{output_path}/partes_moles_BonesSegs_FakeGated.nii.gz')
+        create_save_nifti(heart_mask_upsampled, heart_segs_data.affine, f'{output_path}/partes_moles_HeartSegs_FakeGated.nii.gz')
+        
+        print(f'{output_path}/partes_moles_HeartSegs_FakeGated.nii.gz')
+        print(f'{output_path}/partes_moles_BonesSegs_FakeGated.nii.gz')
+        print(f'{output_path}/partes_moles_FakeGated.nii.gz')
+        
+        new_z_spacing = 3.0
+        imgSize = ct_data_upsampled.shape; # Tamanho do volume da ct
+        imgNewSize = round(imgSize[2] / (new_z_spacing / input_img.header.get_zooms()[2])); # eu to pegando apenas o eixo Z
+        dim_scale_factors = (1, 1, imgNewSize / imgSize[2])
+        # data = imresize3(data, imgNewSize) %% Normalizando o voxel para 3mm apenas no eixo Z
+        print(f'Scale factors: {dim_scale_factors}')
+
+        # Reduce the size of channels the image by interpolation
+        ct_data_upsampled = zoom(ct_data_upsampled, dim_scale_factors, order=5)
+        heart_mask = zoom(heart_mask_upsampled, dim_scale_factors, order=0, mode='nearest')
+        bones_mask = zoom(bones_mask_upsampled, dim_scale_factors, order=0, mode='nearest')
+        
+        print('Reduced shape Exam:', ct_data_upsampled.shape)
+        print('Reduced shape Mask:', heart_mask.shape)
+        print('Reduced shape Bones:', bones_mask.shape)
+        
+        bones_mask[bones_mask > 0] = 1
         
         # Create a new NIfTI image from the modified data
-        create_save_nifti(ct_data_upsampled, heart_segs_data.affine, f'{output_path}/partes_moles_FakeGated_avg_slices=4.nii.gz')
-        create_save_nifti(cardio_data, heart_segs_data.affine, f'{output_path}/partes_moles_HeartSegs_FakeGated_avg_slices=4.nii.gz')
-        create_save_nifti(bones_mask, heart_segs_data.affine, f'{output_path}/partes_moles_BonesSegs_FakeGated_avg_slices=4.nii.gz')
-        
-        # create_save_nifti(ribs_mask, ribs_segs_data.affine, f'{output_path}/partes_moles_RibsSegs_FakeGated_avg_slices=4.nii.gz')
-        # create_save_nifti(vertebral_mask, vertebral_segs_data.affine, f'{output_path}/partes_moles_VertebraSegs_FakeGated_avg_slices=4.nii.gz')
+        # 7. Atualizar a matriz afim para refletir o novo espaçamento
+        new_affine = input_img.affine.copy()
+        new_affine[2, 2] *= (new_z_spacing / input_img.header.get_zooms()[2])  # Ajusta transformação no eixo Z
+
+        create_save_nifti(ct_data_upsampled, new_affine, f'{output_path}/partes_moles_FakeGated_avg_slices=4.nii.gz')
+        create_save_nifti(heart_mask, heart_segs_data.affine, f'{output_path}/partes_moles_HeartSegs_FakeGated_avg_slices=4.nii.gz')
+        create_save_nifti(bones_mask, new_affine, f'{output_path}/partes_moles_BonesSegs_FakeGated_avg_slices=4.nii.gz')
         
         print(f'{output_path}/partes_moles_FakeGated_avg_slices=4.nii.gz')
         print(f'{output_path}/partes_moles_HeartSegs_FakeGated_avg_slices=4.nii.gz')
         print(f'{output_path}/partes_moles_BonesSegs_FakeGated_avg_slices=4.nii.gz')
-        # print(f'{output_path}/partes_moles_RibsSegs_FakeGated_avg_slices=4.nii.gz')
-        # print(f'{output_path}/partes_moles_VertebraSegs_FakeGated_avg_slices=4.nii.gz')

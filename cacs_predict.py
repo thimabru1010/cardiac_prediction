@@ -52,7 +52,10 @@ def main(args):
     # Load image files from data folder    
     # files = glob(data_dir + '/*.nii.gz')
     patients = os.listdir(data_dir)
+    exclusion_patients = ['179238', '176064', '177222']
     for patient in patients:
+        if patient in exclusion_patients:
+            continue
         print('Processing patient: ' + patient)
         # Read image
         basename = get_cardiac_basename(os.listdir(os.path.join(data_dir, patient, patient)))
@@ -61,6 +64,7 @@ def main(args):
             print('Inferring partes_moles')
             # basename = get_partes_moles_basename(os.listdir(os.path.join(data_dir, patient, patient)))
             # basename = 'partes_moles_FakeGated_mean_slice=3mm.nii.gz'
+            # basename = 'partes_moles_FakeGated_avg_slices=4.nii.gz'
             basename = 'partes_moles_FakeGated_avg_slices=4.nii.gz'
             save_filename = basename.split('.')[0]
         print(basename)
