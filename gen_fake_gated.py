@@ -61,15 +61,17 @@ if __name__ == '__main__':
         patient_path = os.path.join(root_path, patient, patient)
         heart_segs_data = nib.load(f'data/EXAMES/Exames_NIFTI/{patient}/{patient}/partes_moles_HeartSegs.nii.gz')
         bones_segs_data = nib.load(f'data/EXAMES/Exames_NIFTI/{patient}/{patient}/partes_moles_BonesSegs.nii.gz')
-
+        # heart_circle_segs_data = nib.load(f'data/EXAMES/Exames_NIFTI/{patient}/{patient}/partes_moles_HeartSegs_4Circle.nii.gz')
         
         heart_mask = heart_segs_data.get_fdata()
         bones_mask = bones_segs_data.get_fdata()
+        # heart_circle_mask = heart_circle_segs_data.get_fdata()
 
         
         if heart_mask[heart_mask != 0].shape[0] == 0:
             print(f'No heart mask found in {patient}')
             continue
+        heart_mask[heart_mask != 0] = 1
         heart_mask[heart_mask != 0] = 1
         
         # heart_mask = heart_mask.copy()
