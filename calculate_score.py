@@ -247,7 +247,7 @@ if __name__ == '__main__':
             print(f'ROI Coronaries Score FG: {roi_coronaries_score_fg}')
             print(f'Reference Score: {df_score_ref[df_score_ref["patient"] == int(patient)]["Escore"].values[0]}')
             
-            results.append([patient, les_score_fg, roi_coronaries_score_fg])
+            results.append([patient, les_score_fg, roi_coronaries_score_fg, heart_score_fg])
             
     #! Gated
     if not args.partes_moles:
@@ -309,9 +309,9 @@ if __name__ == '__main__':
         save_classifier_data(train_les_data, df_score_ref, os.path.join(exam_folder, avg_str, str(cac_th)), method='lesion', dilate="dilate_it=0_dilate_k=0")
         
     results = np.array(results, dtype=int)
-    df = pd.DataFrame(results, columns=['patient', 'Lesion', 'Cor. ROI'])
+    df = pd.DataFrame(results, columns=['patient', 'Lesion', 'Cor. ROI', 'Heart Mask'])
     df = pd.merge(df, df_score_ref[['patient', 'Escore']], on='patient', how='left')
-    df = df[['patient', 'Escore', 'Lesion', 'Cor. ROI']]
+    df = df[['patient', 'Escore', 'Lesion', 'Cor. ROI', 'Heart Mask']]
     
     df = calc_avg_error(df)
     

@@ -201,15 +201,26 @@ if __name__ == '__main__':
         df['Label'] = df['Escore'].apply(lambda x: classify(x, args.clssf_mode))
         df['Lesion Clssf'] = df['Lesion'].apply(lambda x: classify(x, args.clssf_mode))
         df['Heart Clssf'] = df['Heart Mask'].apply(lambda x: classify(x, args.clssf_mode))
+        df['Cor. ROI'] = df['Cor. ROI'].apply(lambda x: classify(x, args.clssf_mode))
 
         acc_lesion_gated = (df['Label'] == df['Lesion Clssf']).sum() / len(df)
         acc_heart_gated = (df['Label'] == df['Heart Clssf']).sum() / len(df)
+        acc_cor_roi_gated = (df['Label'] == df['Cor. ROI']).sum() / len(df)
+        
         f1_score_lesion_gated = f1_score(df['Label'].values, df['Lesion Clssf'].values, average='weighted')
+        f1_score_heart_gated = f1_score(df['Label'].values, df['Heart Clssf'].values, average='weighted')
+        f1_score_cor_roi_gated = f1_score(df['Label'].values, df['Cor. ROI'].values, average='weighted')
         avg_error = df['Lesion Error'].mean()
         
         print(f'Accuracy Lesion: {acc_lesion_gated}')
+        print(f'Accuracy Heart: {acc_heart_gated}')
+        print(f'Accuracy Cor. ROI: {acc_cor_roi_gated}')
+        print('-'*50)
         print(f'F1 Score Lesion: {f1_score_lesion_gated}')
-        print(f'Avg Error: {avg_error}')    
+        print(f'F1 Score Heart: {f1_score_heart_gated}')
+        print(f'F1 Score Cor. ROI: {f1_score_cor_roi_gated}')
+        print()
+        print(f'Avg Lesion Error: {avg_error}')    
         
         metrics.append([run_name, acc_lesion_gated, f1_score_lesion_gated, avg_error])
         #! Confusion Matrices
