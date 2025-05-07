@@ -75,6 +75,18 @@ def tight_crop(arr, thr=10):
     x0, x1 = int(xs.min()), int(xs.max())
     return arr[y0:y1+1, x0:x1+1, ...]
 
+def hue_mask(hsv_array, hue_range, sat_thresh=30, val_thresh=30):
+    h, s, v = cv2.split(hsv_array)
+    lo, hi = hue_range
+    if lo <= hi:
+        mask_h = cv2.inRange(h, lo, hi)
+    else:                              # wrap-around (red)
+        mask_h = cv2.bitwise_or(cv2.inRange(h, 0, hi),
+                                cv2.inRange(h, lo, 179))
+    mask_s = cv2.inRange(s, sat_thresh, 255)   # suppress grey text
+    mask_v = cv2.inRange(v, val_thresh, 255)   # suppress dark bg
+    return cv2.bitwise_and(mask_h, mask_s, mask_v)   # binary 0/255
+
 if __name__ == "__main__":
     # Read the exam_img from a DICOM file
     dicom_path = 'data/EXAMES/310176-20250505T180932Z-1-001/310176/G14.dcm'
@@ -88,12 +100,6 @@ if __name__ == "__main__":
     ct_slice = window_level(ct_np)       # Use first slice, apply window/level
     # mask_np = window_level(mask_np)  # Apply window/level to mask
     zoom_factor = 1.57
-    
-    # mask_cropped_itk = sitk.GetImageFromArray(cropped_mask_np, isVector=True)
-    # mask_gray_itk   = sitk.Cast(sitk.VectorMagnitude(mask_cropped_itk),
-    #                             sitk.sitkFloat32)
-
-    # ct_itk   = sitk.Cast(ct_img, sitk.sitkFloat32)
 
     # Apply manual crop (zoom effect, no resize)
     print(mask_np.shape)
@@ -114,8 +120,15 @@ if __name__ == "__main__":
     
     # Resize cropped mask to 512×512 for plotting
     target_size = (512, 512)
-    mask_resized = cv2.resize(cropped_mask_np, target_size, interpolation=cv2.INTER_LANCZOS4)
+    
+    # kernel = np.ones((3,3), np.uint8)
+    # cropped_mask_np = cv2.morphologyEx(cropped_mask_np, cv2.MORPH_OPEN, kernel)
+    
+    mask_resized = cv2.resize(cropped_mask_np, target_size, interpolation=cv2.INTER_NEAREST_EXACT)
     ct_slice = cv2.resize(ct_slice, target_size, interpolation=cv2.INTER_LANCZOS4)
+    
+    kernel = np.ones((3,3), np.uint8)
+    mask_resized = cv2.morphologyEx(mask_resized, cv2.MORPH_OPEN, kernel)
     
     # Plot CT, cropped mask, and overlay
     fig, axs = plt.subplots(2, 3, figsize=(18, 12))
@@ -150,7 +163,7 @@ if __name__ == "__main__":
     # Apply color map
     print(mask_resized.shape, mask_resized.min(), mask_resized.max())
     mask_resized2 = mask_resized.copy()
-    mask_resized2 = (mask_resized2 - mask_resized2.min()) / (mask_resized2.max() - mask_resized2.min())
+    # mask_resized2 = (mask_resized2 - mask_resized2.min()) / (mask_resized2.max() - mask_resized2.min())
     axs[0,1].imshow(mask_resized2)
         
     axs[0,1].set_title(f"Cropped mask_img (zoom={zoom_factor})")
@@ -168,10 +181,27 @@ if __name__ == "__main__":
     axs[1,0].axis('off')
     
     # mask_segs = mask_resized * calc_candidates
-    mask_segs = mask_resized[:, :, 1]
+    RED1  = (0,   5)      # 0°-10°
+    RED2  = (170, 179)    # 340°-360°
+    GREEN = (50,  80)     # 100°-160°  (LAD in your screenshots)
+    BLUE  = (100,130)     # 200°-260°  (CX)
+    PINK  = (145,175)     # 290°-350°  (calcification contour)
+
+    mask_segs = cv2.cvtColor(mask_resized, cv2.COLOR_RGB2HSV)
+    
+    mask_segs = hue_mask(mask_segs, GREEN)
+    # mask_segs  = hue_mask(mask_segs, BLUE)
+    # mask_pink  = hue_mask(PINK)
+    # mask_segs   = hue_mask(mask_segs, RED1) | hue_mask(mask_segs, RED2)   # combine two red intervals
+
+    # optional clean-up: remove isolated edge noise
+    # kernel = np.ones((3,3), np.uint8)
+    # mask_segs = cv2.morphologyEx(mask_segs, cv2.MORPH_OPEN, kernel)
+
+    # mask_segs = mask_resized[:, :, 1]
     print(mask_segs.shape, mask_segs.min(), mask_segs.max())
-    mask_segs[mask_segs < 150] = 0
-    mask_segs[mask_segs >= 150] = 255
+    # mask_segs[mask_segs < 150] = 0
+    # mask_segs[mask_segs >= 150] = 255
     # mask_segs[:, :] = 255
     
     mask_segs2 = mask_segs * calc_candidates[:, :, 0]
