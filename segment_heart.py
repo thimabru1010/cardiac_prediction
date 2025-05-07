@@ -51,7 +51,7 @@ if __name__ == '__main__':
     keywords = ['partes_moles_body', 'mediastino']  
     
     dilation_kernel = np.ones((3,3), np.uint8)
-    heart_dilation_kernel = np.ones((10,10), np.uint8)    
+    heart_dilation_kernel = np.ones((10,10), np.uint8)  
         
     for patient in tqdm(patients):
         print(patient)
@@ -77,22 +77,22 @@ if __name__ == '__main__':
         esternum_img = extract_ids_mask(img, esternum_ids)
         
         # Dilate masks
-        heart_img = cv2.dilate(heart_img, heart_dilation_kernel, iterations=5)
+        heart_img = cv2.dilate(heart_img, dilation_kernel, iterations=5)
         ribs_img = cv2.dilate(ribs_img, dilation_kernel, iterations=3)
         vertebra_img = cv2.dilate(vertebra_img, dilation_kernel, iterations=2)
         esternum_img = cv2.dilate(esternum_img, dilation_kernel, iterations=2)
         
         bones_img = ribs_img + vertebra_img + esternum_img
         
-        # heart_circle_img = cv2.dilate(heart_img, heart_dilation_kernel, iterations=3)
+        heart_big_img = cv2.dilate(heart_img, heart_dilation_kernel, iterations=3)
 
         create_save_nifti(heart_img, output_img.affine, f'{output_path}/partes_moles_HeartSegs.nii.gz')
         create_save_nifti(bones_img, output_img.affine, f'{output_path}/partes_moles_BonesSegs.nii.gz')
-        # create_save_nifti(heart_circle_img, output_img.affine, f'{output_path}/partes_moles_HeartSegs_4Circle.nii.gz')
+        create_save_nifti(heart_big_img, output_img.affine, f'{output_path}/partes_moles_HeartSegs_dilat_k=10.nii.gz')
         
         print('Saved:', f'{output_path}/partes_moles_HeartSegs.nii.gz')
         print('Saved:', f'{output_path}/partes_moles_BonesSegs.nii.gz')
-        # print('Saved:', f'{output_path}/partes_moles_HeartSegs_4Circle.nii.gz')
+        print('Saved:', f'{output_path}/partes_moles_HeartSegs_dilat_k=10.nii.gz')
         
 
     print('Segmentation finished!')

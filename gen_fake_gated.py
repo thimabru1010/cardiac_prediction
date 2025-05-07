@@ -61,24 +61,23 @@ if __name__ == '__main__':
         patient_path = os.path.join(root_path, patient, patient)
         heart_segs_data = nib.load(f'data/EXAMES/Exames_NIFTI/{patient}/{patient}/partes_moles_HeartSegs.nii.gz')
         bones_segs_data = nib.load(f'data/EXAMES/Exames_NIFTI/{patient}/{patient}/partes_moles_BonesSegs.nii.gz')
-        # heart_circle_segs_data = nib.load(f'data/EXAMES/Exames_NIFTI/{patient}/{patient}/partes_moles_HeartSegs_4Circle.nii.gz')
+        heart_circle_segs_data = nib.load(f'data/EXAMES/Exames_NIFTI/{patient}/{patient}/partes_moles_HeartSegs_dilat_k=10.nii.gz')
         
         heart_mask = heart_segs_data.get_fdata()
         bones_mask = bones_segs_data.get_fdata()
-        # heart_circle_mask = heart_circle_segs_data.get_fdata()
+        heart_circle_mask = heart_circle_segs_data.get_fdata()
 
         
         if heart_mask[heart_mask != 0].shape[0] == 0:
             print(f'No heart mask found in {patient}')
             continue
         heart_mask[heart_mask != 0] = 1
-        heart_mask[heart_mask != 0] = 1
+        heart_circle_mask[heart_circle_mask != 0] = 1
         
-        # heart_mask = heart_mask.copy()
         # Get the slice with the maximum area
-        count_area = np.sum(heart_mask, axis=(0, 1))
+        count_area = np.sum(heart_circle_mask, axis=(0, 1))
         max_index = np.argmax(count_area)
-        max_slice = heart_mask[:, :, max_index]
+        max_slice = heart_circle_mask[:, :, max_index]
         coordinates = np.argwhere(max_slice)
 
         # Calculate the centroid from the Total Segmentator Heart Mask
@@ -95,7 +94,7 @@ if __name__ == '__main__':
         x, y, w, h = rect
         
         # repeate circle mask for all slices
-        circle_mask = np.repeat(circle_mask[:, :, np.newaxis], heart_mask.shape[2], axis=2)
+        circle_mask = np.repeat(circle_mask[:, :, np.newaxis], heart_circle_mask.shape[2], axis=2)
 
         # Save the new NIfTI image
         create_save_nifti(circle_mask, heart_segs_data.affine, f'{output_path}/partes_moles_FakeGated_CircleMask.nii.gz')
@@ -143,7 +142,7 @@ if __name__ == '__main__':
         print(f'Scale factors: {dim_scale_factors}')
 
         # Reduce the size of channels the image by interpolation
-        ct_data_upsampled = zoom(ct_data_upsampled, dim_scale_factors, order=5)
+        ct_data_upsampled = zoom(ct_data_upsampled, dim_scale_factors, order=3)
         heart_mask = zoom(heart_mask_upsampled, dim_scale_factors, order=0, mode='nearest')
         bones_mask = zoom(bones_mask_upsampled, dim_scale_factors, order=0, mode='nearest')
         
@@ -159,7 +158,7 @@ if __name__ == '__main__':
         new_affine[2, 2] *= (new_z_spacing / input_img.header.get_zooms()[2])  # Ajusta transformação no eixo Z
 
         create_save_nifti(ct_data_upsampled, new_affine, f'{output_path}/partes_moles_FakeGated_avg_slices=4.nii.gz')
-        create_save_nifti(heart_mask, heart_segs_data.affine, f'{output_path}/partes_moles_HeartSegs_FakeGated_avg_slices=4.nii.gz')
+        create_save_nifti(heart_mask, new_affine, f'{output_path}/partes_moles_HeartSegs_FakeGated_avg_slices=4.nii.gz')
         create_save_nifti(bones_mask, new_affine, f'{output_path}/partes_moles_BonesSegs_FakeGated_avg_slices=4.nii.gz')
         
         print(f'{output_path}/partes_moles_FakeGated_avg_slices=4.nii.gz')

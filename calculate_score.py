@@ -86,7 +86,7 @@ def calculate_score(exam, mask, heart_roi_mask, bones_mask, calc_candidates_mask
         heart_roi_mask = heart_roi_mask_tmp.copy()
         
     print(mask.shape, calc_candidates_mask.shape, heart_roi_mask.shape)
-    calc_candidates_mask = calc_candidates_mask * mask * heart_roi_mask * bones_mask
+    calc_candidates_mask = calc_candidates_mask * mask  * bones_mask
     
     
     conected_lesions = np.zeros(mask.shape)

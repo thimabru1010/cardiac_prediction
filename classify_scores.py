@@ -143,6 +143,48 @@ def get_integers_from_string(s, key):
     except ValueError:
         integers = int(integers[0])
     return integers
+
+def generate_confusion_matrix(actual_labels, predicted_labels, class_names, title, save_path):
+    """
+    Generate confusion matrix, calculate metrics and save the figure
+    
+    Parameters:
+    - actual_labels: True class labels
+    - predicted_labels: Predicted class labels
+    - class_names: Names of the classes
+    - title: Title for the confusion matrix figure
+    - save_path: Path to save the confusion matrix figure
+    
+    Returns:
+    - sensitivity: Sensitivity per class
+    - specificity: Specificity per class
+    """
+    # Compute confusion matrix
+    cm = confusion_matrix(actual_labels, predicted_labels, normalize='true')
+    cm_df = pd.DataFrame(cm, index=class_names, columns=class_names)
+    
+    # Plot the confusion matrix
+    figure = plt.figure(figsize=(9, 6))
+    sns.heatmap(cm_df, annot=True, cmap='Blues')
+    plt.title(title)
+    plt.ylabel('Actual Class')
+    plt.xlabel('Predicted Class')
+    
+    # Make sure directory exists
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    figure.savefig(save_path, dpi=300)
+    plt.close()
+    
+    # Calculate sensitivity and specificity per class
+    TP = np.diag(cm)
+    FP = cm.sum(axis=0) - TP
+    FN = cm.sum(axis=1) - TP
+    TN = cm.sum() - (TP + FP + FN)
+    
+    sensitivity = TP / (TP + FN)
+    specificity = TN / (TN + FP)
+    
+    return sensitivity, specificity
                 
 if __name__ == '__main__':
     warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -191,7 +233,6 @@ if __name__ == '__main__':
             exp_name = f"Experiment dilated it={dilate_it} k={dilate_k}"
             run_name = f"dilated it={dilate_it} k={dilate_k}"
             
-        mlflow.set_experiment(exp_name)
         df = pd.read_csv(scores_path)
         df.columns = df.columns.str.strip()
         
@@ -223,43 +264,59 @@ if __name__ == '__main__':
         print(f'Avg Lesion Error: {avg_error}')    
         
         metrics.append([run_name, acc_lesion_gated, f1_score_lesion_gated, avg_error])
-        #! Confusion Matrices
+        
         # Define class names
-        # class_names = ['No Risk', 'Risk 1', 'Risk 2', 'Risk 3', 'Risk 4', 'Risk 5']
         class_names = ['No Risk', 'Risk 1', 'Risk 2']
 
-        # Compute confusion matrix for Lesion Gated
-        cm = confusion_matrix(df['Label'].values, df['Lesion Clssf'].values, normalize='true')
-        cm_df = pd.DataFrame(cm, index=class_names, columns=class_names)
-        # Plot the confusion matrix
-        figure = plt.figure(figsize=(9,6))
-        sns.heatmap(cm_df, annot=True, cmap='Blues')
-        plt.title(f'Lesion Confusion Matrix {exam_type} {avg_str} {run_name}')
-        plt.ylabel('Actual Class')
-        plt.xlabel('Predicted Class')
-        # plt.show()
-        # cm_folder_path = f'data/EXAMES/confusion_matrices/{exam_type}/{avg_str}/{args.threshold}'
-        cm_path = os.path.join(exp_root_path, 'Confusion_Matrices')
-        if not os.path.exists(cm_path):
-            os.makedirs(cm_path)
+        # Create base directories for confusion matrices
+        cm_base_path = os.path.join(exp_root_path, 'Confusion_Matrices')
+        
+        # Method-specific directories
+        lesion_cm_dir = os.path.join(cm_base_path, 'Lesion')
+        heart_cm_dir = os.path.join(cm_base_path, 'Heart_Mask')
+        roi_cm_dir = os.path.join(cm_base_path, 'Cor_ROI')
+        
+        # Create directories if they don't exist
+        for dir_path in [lesion_cm_dir, heart_cm_dir, roi_cm_dir]:
+            os.makedirs(dir_path, exist_ok=True)
+        
+        # File naming based on dilation parameters
         if dilate_it is not None and dilate_k is not None:
-            cm_path = os.path.join(cm_path, f'confusion_matrix_dilated_it={dilate_it}_k={dilate_k}.png')
+            file_suffix = f'dilated_it={dilate_it}_k={dilate_k}.png'
         else:
-            cm_path = os.path.join(cm_path, 'confusion_matrix.png')
-        figure.savefig(cm_path, dpi=300)
-        plt.close()
-
-        # Calculates sensibility and specificity per class
-        TP = np.diag(cm)
-        FP = cm.sum(axis=0) - TP
-        FN = cm.sum(axis=1) - TP
-        TN = cm.sum() - (TP + FP + FN)
+            file_suffix = 'no_dilation.png'
+            
+        # Generate confusion matrices for each method
+        lesion_sensitivity, lesion_specificity = generate_confusion_matrix(
+            df['Label'].values, 
+            df['Lesion Clssf'].values, 
+            class_names, 
+            f'Lesion Confusion Matrix {exam_type} {avg_str} {run_name}',
+            os.path.join(lesion_cm_dir, f'confusion_matrix_{file_suffix}')
+        )
         
-        Sensitivity = TP / (TP + FN)
-        Specificity = TN / (TN + FP)
+        heart_sensitivity, heart_specificity = generate_confusion_matrix(
+            df['Label'].values, 
+            df['Heart Clssf'].values, 
+            class_names, 
+            f'Heart Mask Confusion Matrix {exam_type} {avg_str} {run_name}',
+            os.path.join(heart_cm_dir, f'confusion_matrix_{file_suffix}')
+        )
         
-        print(f'Sensitivity: {Sensitivity}')
-        print(f'Specificity: {Specificity}')
+        roi_sensitivity, roi_specificity = generate_confusion_matrix(
+            df['Label'].values, 
+            df['Cor. ROI'].values, 
+            class_names, 
+            f'Corrected ROI Confusion Matrix {exam_type} {avg_str} {run_name}',
+            os.path.join(roi_cm_dir, f'confusion_matrix_{file_suffix}')
+        )
+        
+        print(f'Lesion - Sensitivity: {lesion_sensitivity}')
+        print(f'Lesion - Specificity: {lesion_specificity}')
+        print(f'Heart Mask - Sensitivity: {heart_sensitivity}')
+        print(f'Heart Mask - Specificity: {heart_specificity}')
+        print(f'Coronaries ROI - Sensitivity: {roi_sensitivity}')
+        print(f'Coronaries ROI - Specificity: {roi_specificity}')
         
         if max_f1 < f1_score_lesion_gated:
             max_f1 = f1_score_lesion_gated
@@ -267,27 +324,14 @@ if __name__ == '__main__':
             max_f1_error = avg_error
             print(f'Max F1 Score: {max_f1}')
             best_filename = filename
-            best_sensitivity = Sensitivity
-            best_specificity = Specificity
+            best_sensitivity = lesion_sensitivity
+            best_specificity = lesion_specificity
             max_acc = acc_lesion_gated
             print(f'Max F1 Accuracy: {max_acc}')
             print(f'Max F1 Avg Error: {max_f1_error}')
-        
-        with mlflow.start_run(run_name=run_name):
-            mlflow.set_tag("exam_type", f"{exam_type}")
-            mlflow.set_tag("model", f"{run_name}")
-            # mlflow.set_tag("experiment_type", "baseline")
-    
-            # mlflow.log_metric("ROI ACC", acc_roi_gated)
-            mlflow.log_metric("Lesion ACC", acc_lesion_gated)
-            # mlflow.log_metric("ROI F1 Score", f1_score_roi_gated)
-            mlflow.log_metric("Lesion F1 Score", f1_score_lesion_gated)
-            # mlflow.log_artifact(roi_gated_cm_path)
-            mlflow.log_artifact(cm_path)
 
     print()
     print(f'Best method F1: {max_f1_method} - F1 Score: {max_f1} - Accuracy: {max_acc} - Sensitivity: {best_sensitivity} - Specificity: {best_specificity}')
-    # print(f"Best method Accuracy: {max_acc_method} - with Accuracy: {max_acc}")
     
     max_acc_method = max_f1_method
     # Load the best method
