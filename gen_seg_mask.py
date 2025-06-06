@@ -6,6 +6,101 @@ import SimpleITK as sitk
 from scipy.ndimage import zoom
 from skimage.registration import phase_cross_correlation
 from scipy.ndimage import shift  # or use cv2.warpAffine for integer shift
+import os
+from remove_text_in_mask2 import remove_text_in_mask
+
+import cv2
+import numpy as np
+from scipy.ndimage import affine_transform
+import cv2
+import numpy as np
+
+def align_mask_to_ct(
+        mask_img: np.ndarray,
+        ct_img:   np.ndarray,
+        motion: int = cv2.MOTION_AFFINE,
+        n_iter: int = 5_000,
+        eps: float = 1e-7,
+        gauss_filt_size: int = 5,
+        return_warp: bool = False,
+):
+    """
+    Usa o ECC do OpenCV para alinhar `mask_img` (moving) a `ct_img` (fixed).
+
+    Parameters
+    ----------
+    mask_img, ct_img : np.ndarray
+        Imagens RGB ou escala-de-cinza, ambas com shape (H, W [,3]).
+    motion : int
+        cv2.MOTION_TRANSLATION | MOTION_EUCLIDEAN | MOTION_AFFINE | MOTION_HOMOGRAPHY.
+    n_iter : int
+        Máximo de iterações do ECC.
+    eps : float
+        Critério de convergência (ΔECC mínimo).
+    gauss_filt_size : int
+        Suavização opcional do ECC (ajuda em ruído).
+    return_warp : bool
+        Se True, devolve também a matriz de deformação estimada.
+
+    Returns
+    -------
+    aligned_mask : np.ndarray
+        Máscara registrada no espaço de `ct_img`.
+    warp_matrix  : np.ndarray  (opcional)
+        Matriz de transformação estimada (2×3 ou 3×3).
+    """
+    if mask_img.ndim == 3:
+        mask_gray = cv2.cvtColor(mask_img, cv2.COLOR_BGR2GRAY)
+    else:
+        mask_gray = mask_img.copy()
+
+    if ct_img.ndim == 3:
+        ct_gray = cv2.cvtColor(ct_img, cv2.COLOR_BGR2GRAY)
+    else:
+        ct_gray = ct_img.copy()
+
+    mask_f = mask_gray.astype(np.float32) / 255.0
+    ct_f   = ct_gray.astype(np.float32)   / 255.0
+
+    # matriz inicial (identidade)
+    warp_matrix = (
+        np.eye(3, 3, dtype=np.float32)
+        if motion == cv2.MOTION_HOMOGRAPHY
+        else np.eye(2, 3, dtype=np.float32)
+    )
+
+    criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, n_iter, eps)
+
+    _ = cv2.findTransformECC(
+        templateImage=ct_f,
+        inputImage=mask_f,
+        warpMatrix=warp_matrix,
+        motionType=motion,
+        criteria=criteria,
+        inputMask=None,
+        gaussFiltSize=gauss_filt_size,
+    )
+
+    # aplica a deformação na máscara original (RGB ou cinza)
+    if motion == cv2.MOTION_HOMOGRAPHY:
+        aligned = cv2.warpPerspective(
+            mask_img,
+            warp_matrix,
+            (ct_img.shape[1], ct_img.shape[0]),
+            flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP,
+            borderMode=cv2.BORDER_TRANSPARENT,
+        )
+    else:
+        aligned = cv2.warpAffine(
+            mask_img,
+            warp_matrix[:2],
+            (ct_img.shape[1], ct_img.shape[0]),
+            flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP,
+            borderMode=cv2.BORDER_TRANSPARENT,
+        )
+
+    return (aligned, warp_matrix) if return_warp else aligned
+
 
 def apply_window(img, center, width):
     """Apply DICOM windowing."""
@@ -88,18 +183,54 @@ def hue_mask(hsv_array, hue_range, sat_thresh=30, val_thresh=30):
     return cv2.bitwise_and(mask_h, mask_s, mask_v)   # binary 0/255
 
 if __name__ == "__main__":
-    # Read the exam_img from a DICOM file
-    dicom_path = 'data/EXAMES/310176-20250505T180932Z-1-001/310176/G14.dcm'
-    ct_img = sitk.ReadImage(dicom_path)
-    
-    dicom_path = 'data/EXAMES/310176-20250505T180932Z-1-001/310176/GC3.dcm'
-    mask_img = sitk.ReadImage(dicom_path)
+    # dicom_path = 'data/EXAMES/Patients_AutomatedMask/310176/GC3.dcm'
+    # dicom_path = 'data/EXAMES/Patients_AutomatedMask/310833/ESCORE IA2.dcm'
+    dicom_folder = 'data/EXAMES/Patients_AutomatedMask/311180'
+    # files = [f for f in os.listdir(dicom_folder) if 'IA' in f]
+    # 1. Descubra todos os SeriesInstanceUIDs na pasta
+    reader = sitk.ImageSeriesReader()
+    series_IDs = reader.GetGDCMSeriesIDs(dicom_folder)
+    print("Séries encontradas:", series_IDs)
+    for series_uid in series_IDs:
+        file_list = reader.GetGDCMSeriesFileNames(dicom_folder, series_uid)
+        ds = pydicom.dcmread(file_list[0])
+        print(f"Series UID: {series_uid} | Description: {ds.SeriesDescription}")
+        if 'Gap Corrected ESCORE Cardiac' in ds.SeriesDescription:
+            print("Found the series with Gap Corrected ESCORE Cardiac")
+            # Read the series
+            file_list = list(file_list)
+            # print(file_list)
+            # Sort the file list by InstanceNumber
+            file_list.sort(key=lambda x: pydicom.dcmread(x).InstanceNumber)
+            # file_list.sort()
+            print(file_list)
+            reader.SetFileNames(file_list)
+            ct_img = reader.Execute()
+            print("CT image loaded successfully.")
+        if 'ESCORE IA' in ds.SeriesDescription:
+            print("Found the series with ESCORE IA")
+            # Read the series
+            # print(file_list)
+            file_list = list(file_list)
+            file_list.sort(key=lambda x: pydicom.dcmread(x).InstanceNumber)
+            print(file_list)
+            reader.SetFileNames(file_list)
+            mask_img = reader.Execute()
+            print("Mask image loaded successfully.")
+    print("CT image shape:", ct_img.GetSize())
+    print("Mask image shape:", mask_img.GetSize())
 
-    mask_np = sitk.GetArrayFromImage(mask_img)[0]  # (z, y, x) or (z, y, x, c)
-    ct_np = sitk.GetArrayFromImage(ct_img)[0]  # (z, y, x)
+    # dicom_path = 'data/EXAMES/Patients_AutomatedMask/311180/IA4.dcm'
+    # mask_img = sitk.ReadImage(dicom_path)
+
+    mask_np = sitk.GetArrayFromImage(mask_img)[3]  # (z, y, x) or (z, y, x, c)
+    ct_np = sitk.GetArrayFromImage(ct_img)[15]  # (z, y, x)
     ct_slice = window_level(ct_np)       # Use first slice, apply window/level
     # mask_np = window_level(mask_np)  # Apply window/level to mask
-    zoom_factor = 1.57
+    # zoom_factor = 1.57
+    zoom_factor = 1.50
+    
+    mask_np = remove_text_in_mask(mask_np)  # Remove text from mask
 
     # Apply manual crop (zoom effect, no resize)
     print(mask_np.shape)
@@ -109,27 +240,36 @@ if __name__ == "__main__":
         raise RuntimeError("Unexpected mask image shape")
     
     # Remove the letters written from top to allow tight_crop
-    cropped_mask_np = cropped_mask_np[50:, :]
+    cropped_mask_np = cropped_mask_np[50:, :-50]
     
     cropped_mask_np = tight_crop(cropped_mask_np, thr=10)
-    cropped_mask_np = cropped_mask_np[:, :-40]
+    
+    # Vertical offset
+    # cropped_mask_np = cropped_mask_np[20:, :]
+    #! Idea: try to calculate the similarity with Orb and adjust the offset
+    #! Or use phase_cross_correlation to find the best offset
+    # shifts, error, phasediff = phase_cross_correlation(ct_slice, cropped_mask_np)
+    # aligned_mask = shift(cropped_mask_np, shift=(-shifts[0], -shifts[1]))
 
     print(ct_slice.shape)
     print(ct_slice.min(), ct_slice.max())
-    ct_slice = tight_crop(ct_slice, thr=10)
+    ct_slice = tight_crop(ct_slice, thr=0)
     
     # Resize cropped mask to 512×512 for plotting
     target_size = (512, 512)
-    
-    # kernel = np.ones((3,3), np.uint8)
-    # cropped_mask_np = cv2.morphologyEx(cropped_mask_np, cv2.MORPH_OPEN, kernel)
     
     mask_resized = cv2.resize(cropped_mask_np, target_size, interpolation=cv2.INTER_NEAREST_EXACT)
     ct_slice = cv2.resize(ct_slice, target_size, interpolation=cv2.INTER_LANCZOS4)
     
     kernel = np.ones((3,3), np.uint8)
     mask_resized = cv2.morphologyEx(mask_resized, cv2.MORPH_OPEN, kernel)
+    # mask_resized = cropped_mask_np.copy()
     
+    mask_resized, W = align_mask_to_ct(mask_resized, ct_slice, return_warp=True)
+
+
+    print(mask_resized.shape, mask_resized.min(), mask_resized.max())
+    print(ct_slice.shape, ct_slice.min(), ct_slice.max())
     # Plot CT, cropped mask, and overlay
     fig, axs = plt.subplots(2, 3, figsize=(18, 12))
 
@@ -153,13 +293,6 @@ if __name__ == "__main__":
         calc_candidates,
         calc_candidates
     ], axis=-1)
-    # mask_resized = mask_resized * calc_candidates
-    # lower_r_bound = 200
-    # upper_r_bound = 255
-    # lower_g_bound = 200
-    # upper_g_bound = 255
-    # lower_b_bound = 200
-    # upper_b_bound = 255
     # Apply color map
     print(mask_resized.shape, mask_resized.min(), mask_resized.max())
     mask_resized2 = mask_resized.copy()
@@ -172,12 +305,15 @@ if __name__ == "__main__":
     # Overlay CT with mask at 50% opacity
     axs[0,2].imshow(ct_slice, cmap='gray')
     axs[0,2].imshow(mask_resized, cmap='jet', alpha=0.5)
-    axs[0,2].set_title("Overlay (alpha=0.5)")
+    axs[0,2].set_title("Overlay")
     axs[0,2].axis('off')
+    
+    cv2.imwrite('data/ct_slice.png', ct_slice)
+    cv2.imwrite('data/mask_resized.png', mask_resized)
 
     # second row (repeat or replace with other images)
     axs[1,0].imshow(calc_candidates, cmap='gray')
-    axs[1,0].set_title("CT image (window/level) [row 2]")
+    axs[1,0].set_title("Calcifications")
     axs[1,0].axis('off')
     
     # mask_segs = mask_resized * calc_candidates
@@ -189,7 +325,7 @@ if __name__ == "__main__":
 
     mask_segs = cv2.cvtColor(mask_resized, cv2.COLOR_RGB2HSV)
     
-    mask_segs = hue_mask(mask_segs, GREEN)
+    mask_segs = hue_mask(mask_segs, BLUE)
     # mask_segs  = hue_mask(mask_segs, BLUE)
     # mask_pink  = hue_mask(PINK)
     # mask_segs   = hue_mask(mask_segs, RED1) | hue_mask(mask_segs, RED2)   # combine two red intervals
@@ -208,16 +344,16 @@ if __name__ == "__main__":
     # mask_segs2 = ct_slice - 
     
     axs[1,1].imshow(mask_segs2, cmap='gray')
-    axs[1,1].set_title("Mask Blue channel")
+    axs[1,1].set_title("Mask")
     axs[1,1].axis('off')
     
     axs[1,2].imshow(ct_slice, cmap='gray')
     axs[1,2].imshow(mask_segs2, cmap='jet', alpha=0.2)
-    axs[1,2].set_title("Blue Channel and Calcification")
+    axs[1,2].set_title("Mask + CT image")
     axs[1,2].axis('off')
 
     plt.tight_layout()
-    fig.savefig('data/overlay.png', dpi=300)
+    fig.savefig('data/overlay1.png', dpi=300)
     plt.show()
 
 

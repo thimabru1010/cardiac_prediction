@@ -1,67 +1,84 @@
-import numpy as np
 import cv2
+import numpy as np
 import matplotlib.pyplot as plt
-import SimpleITK as sitk
+from pathlib import Path
 
-# ------------------------------------------------------------------
-# 0.  LOAD THE SAME DATA  (unchanged)
-# ------------------------------------------------------------------
-ct_img  = sitk.ReadImage('data/EXAMES/310176-20250505T180932Z-1-001/310176/G14.dcm')
-mask_img = sitk.ReadImage('data/EXAMES/310176-20250505T180932Z-1-001/310176/GC3.dcm')
+# Paths provided by the user prompt
+mask_path = Path('data/mask_resized.png')
+ct_path = Path('data/ct_slice.png')
 
-ct_np  = sitk.GetArrayFromImage(ct_img)[0].astype(np.float32)   # (512,512)
-ps_rgb = sitk.GetArrayFromImage(mask_img)[0]                    # (H,W,3)
+# Read images
+mask_rgb = cv2.imread(str(mask_path), cv2.IMREAD_COLOR)   # BGR by default
+ct_rgb = cv2.imread(str(ct_path), cv2.IMREAD_COLOR)
 
-zoom = 1.57     # Vitrea zoom
+if mask_rgb is None or ct_rgb is None:
+    raise FileNotFoundError("One of the images could not be loaded. Check the paths.")
 
-# ------------------------------------------------------------------
-# 1.  LATERAL + VERTICAL  CROP  BASED  ON  ZOOM
-# ------------------------------------------------------------------
-#   • Vitrea shows the *zoomed* CT (512×512) centred in its window.
-#   • Width of that region in the screenshot = 512 * zoom
-#   • Same for height (isotropic zoom).
-#
-H, W = ps_rgb.shape[:2]
-crop_w = int(round(512 * zoom))
-crop_h = int(round(512 * zoom))
+# Convert both to grayscale for alignment
+mask_gray = cv2.cvtColor(mask_rgb, cv2.COLOR_BGR2GRAY)
+ct_gray = cv2.cvtColor(ct_rgb, cv2.COLOR_BGR2GRAY)
 
-# Find rough centre of CT in the screenshot (non‑black bbox)
-mask = ps_rgb.mean(-1) > 10
-ys, xs = np.where(mask)
-cy = int(round(ys.mean()))
-cx = int(round(xs.mean()))
+# Normalize to float32 [0,1]
+mask_float = mask_gray.astype(np.float32) / 255.0
+ct_float = ct_gray.astype(np.float32) / 255.0
 
-# Make symmetric crop inside image bounds
-x0 = max(0, cx - crop_w // 2)
-x1 = min(W, x0 + crop_w)
-x0 = x1 - crop_w                                  # adjust if hit right edge
+# Ensure images are the same size
+if mask_float.shape != ct_float.shape:
+    raise ValueError(f"Image shapes differ. mask: {mask_float.shape}, ct: {ct_float.shape}")
 
-y0 = max(0, cy - crop_h // 2)
-y1 = min(H, y0 + crop_h)
-y0 = y1 - crop_h                                  # adjust if hit bottom edge
+# Initialize warp matrix (translation + rotation allowed here)
+warp_mode = cv2.MOTION_AFFINE  # allows translation + rotation + scale
+warp_matrix = np.eye(2, 3, dtype=np.float32)
 
-ps_crop = ps_rgb[y0:y1, x0:x1]                    # shape ≈ (crop_h, crop_w)
+# Define the stopping criteria for ECC
+criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 5000, 1e-7)
 
-# ------------------------------------------------------------------
-# 2.  RESIZE  TO  512×512  (undo the zoom)
-# ------------------------------------------------------------------
-ps_resized = cv2.resize(ps_crop, (512, 512), interpolation=cv2.INTER_LINEAR)
+# Run the ECC algorithm
+(cc, warp_matrix) = cv2.findTransformECC(
+    templateImage=ct_float,
+    inputImage=mask_float,
+    warpMatrix=warp_matrix,
+    motionType=warp_mode,
+    criteria=criteria,
+    inputMask=None,
+    gaussFiltSize=5
+)
 
-# ------------------------------------------------------------------
-# 3.  QUICK  OVERLAY  CHECK
-# ------------------------------------------------------------------
-fig, axs = plt.subplots(1, 3, figsize=(15, 5))
-axs[0].imshow(ct_np, cmap='gray')
-axs[0].set_title("CT image")
-axs[0].axis('off')
+# Warp the mask image (color) to CT space
+aligned_mask_rgb = cv2.warpAffine(
+    mask_rgb,
+    warp_matrix,
+    (ct_rgb.shape[1], ct_rgb.shape[0]),
+    flags=cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP,
+    borderMode=cv2.BORDER_TRANSPARENT
+)
 
-axs[1].imshow(ps_resized)
-axs[1].set_title("Cropped + resized screenshot")
-axs[1].axis('off')
+# Create an overlay for visualization
+overlay = cv2.addWeighted(ct_rgb, 0.7, aligned_mask_rgb, 0.3, 0)
 
-axs[2].imshow(ct_np, cmap='gray')
-axs[2].imshow(ps_resized, alpha=0.4)
-axs[2].set_title("Overlay α=0.4")
-axs[2].axis('off')
+# Save the aligned mask for user download
+aligned_path = Path("data/aligned_mask.png")
+cv2.imwrite(str(aligned_path), aligned_mask_rgb)
 
-plt.tight_layout(); plt.show()
+# Display results
+plt.figure(figsize=(15, 5))
+
+plt.subplot(1, 3, 1)
+plt.title("Original CT")
+plt.axis('off')
+plt.imshow(cv2.cvtColor(ct_rgb, cv2.COLOR_BGR2RGB))
+
+plt.subplot(1, 3, 2)
+plt.title("Original Mask (Unaligned)")
+plt.axis('off')
+plt.imshow(cv2.cvtColor(mask_rgb, cv2.COLOR_BGR2RGB))
+
+plt.subplot(1, 3, 3)
+plt.title("Overlay after Alignment")
+plt.axis('off')
+plt.imshow(cv2.cvtColor(overlay, cv2.COLOR_BGR2RGB))
+
+plt.tight_layout()
+plt.show()
+
+# aligned_path
