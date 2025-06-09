@@ -18,7 +18,7 @@ def zero_out_regions(img: np.ndarray, bboxes):
     return out
 
 # Load images
-root_folder = 'data/mask_generation_test/311180'
+root_folder = 'data/mask_generation_test/312323'
 orig_path = f'{root_folder}/exam_mask.png'
 # proc_path = f'{root_folder}/311122/exam_mask_no_text_v3.png'  # previously saved original zeroed
 

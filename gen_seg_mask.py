@@ -7,7 +7,7 @@ from scipy.ndimage import zoom
 from skimage.registration import phase_cross_correlation
 from scipy.ndimage import shift  # or use cv2.warpAffine for integer shift
 import os
-from remove_text_in_mask2 import remove_text_in_mask
+from detect_text_in_image2 import remove_text_in_mask
 
 import cv2
 import numpy as np
@@ -183,9 +183,7 @@ def hue_mask(hsv_array, hue_range, sat_thresh=30, val_thresh=30):
     return cv2.bitwise_and(mask_h, mask_s, mask_v)   # binary 0/255
 
 if __name__ == "__main__":
-    # dicom_path = 'data/EXAMES/Patients_AutomatedMask/310176/GC3.dcm'
-    # dicom_path = 'data/EXAMES/Patients_AutomatedMask/310833/ESCORE IA2.dcm'
-    dicom_folder = 'data/EXAMES/Patients_AutomatedMask/311180'
+    dicom_folder = 'data/EXAMES/Patients_AutomatedMask/311122'
     # files = [f for f in os.listdir(dicom_folder) if 'IA' in f]
     # 1. Descubra todos os SeriesInstanceUIDs na pasta
     reader = sitk.ImageSeriesReader()
@@ -223,8 +221,8 @@ if __name__ == "__main__":
     # dicom_path = 'data/EXAMES/Patients_AutomatedMask/311180/IA4.dcm'
     # mask_img = sitk.ReadImage(dicom_path)
 
-    mask_np = sitk.GetArrayFromImage(mask_img)[3]  # (z, y, x) or (z, y, x, c)
-    ct_np = sitk.GetArrayFromImage(ct_img)[15]  # (z, y, x)
+    mask_np = sitk.GetArrayFromImage(mask_img)[1]  # (z, y, x) or (z, y, x, c)
+    ct_np = sitk.GetArrayFromImage(ct_img)[6]  # (z, y, x)
     ct_slice = window_level(ct_np)       # Use first slice, apply window/level
     # mask_np = window_level(mask_np)  # Apply window/level to mask
     # zoom_factor = 1.57
@@ -325,7 +323,7 @@ if __name__ == "__main__":
 
     mask_segs = cv2.cvtColor(mask_resized, cv2.COLOR_RGB2HSV)
     
-    mask_segs = hue_mask(mask_segs, BLUE)
+    mask_segs = hue_mask(mask_segs, GREEN)
     # mask_segs  = hue_mask(mask_segs, BLUE)
     # mask_pink  = hue_mask(PINK)
     # mask_segs   = hue_mask(mask_segs, RED1) | hue_mask(mask_segs, RED2)   # combine two red intervals
