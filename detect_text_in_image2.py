@@ -1,6 +1,6 @@
 import os
 from PIL import Image
-import google.generativeai as genai
+import google.generativeai as genai # type: ignore
 import json
 import re
 
@@ -49,7 +49,7 @@ def supports_multimodal(model_name):
     return False
 
 # --- Função principal para interagir com o modelo ---
-def interact_with_gemini(model_name: str, prompt_text: str, image_path: str = None):
+def interact_with_gemini(model_name: str, prompt_text: str, image_path: str = ''):
     """
     Interage com um modelo Gemini, enviando texto e opcionalmente uma imagem.
 
