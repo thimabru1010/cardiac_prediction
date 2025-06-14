@@ -49,39 +49,74 @@ def supports_multimodal(model_name):
     return False
 
 # --- Função principal para interagir com o modelo ---
-def interact_with_gemini(model_name: str, prompt_text: str, image_path: str = ''):
+
+def interact_with_gemini(model_name: str, prompt_text: str, image_pil: Image.Image = None): # type: ignore
     """
     Interage com um modelo Gemini, enviando texto e opcionalmente uma imagem.
 
     Args:
         model_name: O nome do modelo a ser usado (ex: 'gemini-1.5-pro-latest').
         prompt_text: O texto do prompt para o modelo.
-        image_path: O caminho para o arquivo de imagem (opcional).
+        image_pil: A imagem PIL a ser enviada (opcional, padrão: None).
     """
     try:
-        # Checa se o modelo suporta multimodalidade, se necessário
-        # if image_path and not supports_multimodal(model_name):
-        #     print(f"Erro: O modelo '{model_name}' não suporta entrada multimodal.")
-        #     return None
-
         # Inicializa o modelo especificado pelo nome
         print(f"\nTentando usar o modelo: {model_name}")
         model = genai.GenerativeModel(model_name)
 
-        # Prepara o conteúdo para enviar
         content = [prompt_text]
-        if image_path:
-            img = load_image_from_path(image_path)
-            if img is not None:
-                content.append(img)
-            else:
-                print("Imagem não carregada. Enviando apenas texto.")
-        # Gera a resposta
+        if image_pil is not None:
+            content.append(image_pil) # type: ignore
+            
         response = model.generate_content(content)
         return response.text if hasattr(response, 'text') else str(response)
     except Exception as e:
         print(f"Ocorreu um erro ao interagir com a API: {e}")
         return None
+
+def post_process_response(response_text):
+    """
+    Procura primeiro bloco de texto que começa e termina com chaves
+    """
+    try:
+        match = re.search(r'\{.*?\}', response_text, re.DOTALL)
+        if match:
+            json_str = match.group(0)
+            return json.loads(json_str)
+        else:
+            print("Nenhum JSON encontrado na resposta.")
+            return None
+    except json.JSONDecodeError as e:
+        print(f"Erro ao decodificar JSON: {e}")
+        return None
+
+def extract_zoom_and_number(response_dict):
+    """
+    Extrai os campos 'zoom' e 'numero' de um dicionário de resposta.
+    """
+    # Remove o simbolo '%' do campo 'zoom' e converte para float
+    zoom = int(response_dict['zoom'][:-1]) / 100
+    numero = response_dict['numero']
+    return zoom, numero
+
+def extract_text_from_image(model_name: str, prompt: str, image_pil: Image.Image):
+    """
+    Detecta texto em uma imagem usando o modelo Gemini.
+
+    Args:
+        model_name: O nome do modelo a ser usado.
+        prompt: O prompt de texto para guiar a detecção.
+        image_pil: A imagem PIL onde o texto será detectado.
+
+    Returns:
+        Um dicionário com os campos 'zoom' e 'numero' extraídos da resposta.
+    """
+    response = interact_with_gemini(model_name, prompt, image_pil)
+    if response:
+        response_dict = post_process_response(response)
+        if response_dict:
+            return extract_zoom_and_number(response_dict)
+    return None
 
 # --- Exemplo de como usar o script ---
 if __name__ == "__main__":
@@ -98,31 +133,10 @@ if __name__ == "__main__":
 
     # Caminho para sua imagem. Mude para o caminho real de um arquivo de imagem local.
     # Deixe como None se você quiser enviar apenas texto.
-    caminho_da_imagem = 'data/mask_generation_test/312323/exam_mask.png' # <--- MUDAR PARA O CAMINHO REAL DA IMAGEM
+    caminho_da_imagem = 'data/mask_generation_test/311180/exam_mask.png' # <--- MUDAR PARA O CAMINHO REAL DA IMAGEM
 
-    # --- Execute a interação com o modelo ---
-    # Certifique-se de que a imagem existe no caminho especificado se image_path não for None.
-    if caminho_da_imagem and not os.path.exists(caminho_da_imagem):
-        print(f"Erro: O arquivo de imagem '{caminho_da_imagem}' não existe.")
-        caminho_da_imagem = None
+    img = load_image_from_path(caminho_da_imagem)
 
-    print(f"\nChamando o modelo '{modelo_escolhido}' com o prompt e imagem (se fornecida)...")
-    resposta_do_modelo = interact_with_gemini(modelo_escolhido, prompt_para_modelo, image_path=caminho_da_imagem)
-    # resp_dict = json.loads(resposta_do_modelo)
-    # Extrai apenas o bloco JSON
-    # Procura primeiro bloco de texto que começa e termina com chaves
-    match = re.search(r'\{.*?\}', resposta_do_modelo, re.DOTALL)
-    if match:
-        json_str = match.group(0)
-        resp_dict = json.loads(json_str)
-    else:
-        print("Nenhum JSON encontrado.")
+    zoom, numero = extract_text_from_image(modelo_escolhido, prompt_para_modelo, img) # type: ignore
     
-    print(resp_dict)
-    # --- Exiba a resposta ---
-    print("\n--- Resposta do Modelo ---")
-    if resposta_do_modelo:
-        print(resp_dict)
-        # print(resposta_do_modelo)
-    else:
-        print("Não foi possível obter uma resposta do modelo.")
+    print(f"\nResposta do modelo: zoom={zoom}, Slice number={numero}")

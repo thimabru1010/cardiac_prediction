@@ -3,18 +3,25 @@ import numpy as np
 import pydicom
 import matplotlib.pyplot as plt
 import SimpleITK as sitk
-from scipy.ndimage import zoom
+from scipy.ndimage import zoom, affine_transform
 from skimage.registration import phase_cross_correlation
 from scipy.ndimage import shift  # or use cv2.warpAffine for integer shift
 import os
-from detect_text_in_image2 import remove_text_in_mask
+from detect_text_in_image import extract_text_from_image
+import google.generativeai as genai # type: ignore
+from PIL import Image
 
-import cv2
-import numpy as np
-from scipy.ndimage import affine_transform
-import cv2
-import numpy as np
-
+# --- Configuração da API Key ---
+# RECOMENDADO: Use uma variável de ambiente chamada GOOGLE_API_KEY
+try:
+    api_key = "AIzaSyBrPHg64ZYQaiQmTw5oCvy9luZ8bvQTDHE"
+    genai.configure(api_key=api_key)
+    print("API Key configurada via variável de ambiente GOOGLE_API_KEY.")
+except KeyError:
+    print("ERRO: A variável de ambiente GOOGLE_API_KEY não está definida.")
+    print("Por favor, defina GOOGLE_API_KEY com sua chave API.")
+    exit() # Saia se a chave não estiver configurada
+    
 def align_mask_to_ct(
         mask_img: np.ndarray,
         ct_img:   np.ndarray,
@@ -226,8 +233,13 @@ if __name__ == "__main__":
     ct_slice = window_level(ct_np)       # Use first slice, apply window/level
     # mask_np = window_level(mask_np)  # Apply window/level to mask
     # zoom_factor = 1.57
-    zoom_factor = 1.50
     
+    zoom_factor, slice_position = extract_text_from_image(
+        model_name='gemini-2.0-flash-thinking-exp-01-21',
+        prompt="Me retorne o que está escrito no canto inferior direito da imagem após a palavra 'Zoom:' e o número após o caracter '#'/ Me retorne um json contendo os seguintes campos: 'zoom' e 'numero'. O campo 'zoom' deve conter o texto após a palavra 'Zoom:' e o campo 'numero' deve conter o número após o caracter '#'.",
+        image_pil=Image.fromarray(mask_np)) # type: ignore
+    
+    print(f"Zoom factor: {zoom_factor} - Slice position: {slice_position}")
     mask_np = remove_text_in_mask(mask_np)  # Remove text from mask
 
     # Apply manual crop (zoom effect, no resize)
@@ -241,13 +253,6 @@ if __name__ == "__main__":
     cropped_mask_np = cropped_mask_np[50:, :-50]
     
     cropped_mask_np = tight_crop(cropped_mask_np, thr=10)
-    
-    # Vertical offset
-    # cropped_mask_np = cropped_mask_np[20:, :]
-    #! Idea: try to calculate the similarity with Orb and adjust the offset
-    #! Or use phase_cross_correlation to find the best offset
-    # shifts, error, phasediff = phase_cross_correlation(ct_slice, cropped_mask_np)
-    # aligned_mask = shift(cropped_mask_np, shift=(-shifts[0], -shifts[1]))
 
     print(ct_slice.shape)
     print(ct_slice.min(), ct_slice.max())
@@ -264,7 +269,6 @@ if __name__ == "__main__":
     # mask_resized = cropped_mask_np.copy()
     
     mask_resized, W = align_mask_to_ct(mask_resized, ct_slice, return_warp=True)
-
 
     print(mask_resized.shape, mask_resized.min(), mask_resized.max())
     print(ct_slice.shape, ct_slice.min(), ct_slice.max())
@@ -324,22 +328,14 @@ if __name__ == "__main__":
     mask_segs = cv2.cvtColor(mask_resized, cv2.COLOR_RGB2HSV)
     
     mask_segs = hue_mask(mask_segs, GREEN)
-    # mask_segs  = hue_mask(mask_segs, BLUE)
-    # mask_pink  = hue_mask(PINK)
-    # mask_segs   = hue_mask(mask_segs, RED1) | hue_mask(mask_segs, RED2)   # combine two red intervals
 
     # optional clean-up: remove isolated edge noise
     # kernel = np.ones((3,3), np.uint8)
     # mask_segs = cv2.morphologyEx(mask_segs, cv2.MORPH_OPEN, kernel)
 
-    # mask_segs = mask_resized[:, :, 1]
     print(mask_segs.shape, mask_segs.min(), mask_segs.max())
-    # mask_segs[mask_segs < 150] = 0
-    # mask_segs[mask_segs >= 150] = 255
-    # mask_segs[:, :] = 255
     
     mask_segs2 = mask_segs * calc_candidates[:, :, 0]
-    # mask_segs2 = ct_slice - 
     
     axs[1,1].imshow(mask_segs2, cmap='gray')
     axs[1,1].set_title("Mask")
