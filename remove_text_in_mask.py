@@ -17,21 +17,6 @@ def zero_out_regions(img: np.ndarray, bboxes):
         out[y1:y2 + 1, x1:x2 + 1] = 0
     return out
 
-# Load images
-root_folder = 'data/mask_generation_test/312323'
-orig_path = f'{root_folder}/exam_mask.png'
-# proc_path = f'{root_folder}/311122/exam_mask_no_text_v3.png'  # previously saved original zeroed
-
-orig = cv2.imread(orig_path)
-# proc = cv2.imread(proc_path)
-proc = orig.copy()  # Use the original image for processing
-
-h, w, _ = orig.shape
-
-# Detect text for bboxes again
-gray = cv2.cvtColor(orig, cv2.COLOR_BGR2GRAY)
-_, mask = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
-
 def bbox_coords(mask):
     coords = np.column_stack(np.where(mask))
     if coords.size == 0:
@@ -40,27 +25,50 @@ def bbox_coords(mask):
     y_max, x_max = coords.max(axis=0)
     return x_min, y_min, x_max, y_max
 
-m = 0.35
-zones = {
-    'top_left':   (slice(0, int(h*m)), slice(0, int(w*m))),
-    'top_right':  (slice(0, int(h*m)), slice(int(w*(1-m)), w)),
-    'bottom_left':(slice(int(h*(1-m)), h), slice(0, int(w*m))),
-    'bottom_right':(slice(int(h*(1-m)), h), slice(int(w*(1-m)), w))
-}
+def detect_text(image):
+    """
+    Detects text in an image and returns bounding boxes.
+    This is a placeholder function. Replace with actual text detection logic.
+    """
+    h, w, _ = image.shape
 
-bboxes = []
-for name, (ys, xs) in zones.items():
-    bbox = bbox_coords(mask[ys, xs] == 255)
-    if bbox:
-        x_min, y_min, x_max, y_max = bbox
-        x_min += xs.start; x_max += xs.start
-        y_min += ys.start; y_max += ys.start
-        margin = 5
-        x_min = max(0, x_min-margin); y_min = max(0, y_min-margin)
-        x_max = min(w-1, x_max+margin); y_max = min(h-1, y_max+margin)
-        bboxes.append((x_min, y_min, x_max, y_max))
+    # Detect text for bboxes again
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    _, mask = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
+    m = 0.35
+    zones = {
+        'top_left':   (slice(0, int(h*m)), slice(0, int(w*m))),
+        'top_right':  (slice(0, int(h*m)), slice(int(w*(1-m)), w)),
+        'bottom_left':(slice(int(h*(1-m)), h), slice(0, int(w*m))),
+        'bottom_right':(slice(int(h*(1-m)), h), slice(int(w*(1-m)), w))
+    }
+    bboxes = []
+    for name, (ys, xs) in zones.items():
+        bbox = bbox_coords(mask[ys, xs] == 255)
+        if bbox:
+            x_min, y_min, x_max, y_max = bbox
+            x_min += xs.start; x_max += xs.start
+            y_min += ys.start; y_max += ys.start
+            margin = 5
+            x_min = max(0, x_min-margin); y_min = max(0, y_min-margin)
+            x_max = min(w-1, x_max+margin); y_max = min(h-1, y_max+margin)
+            bboxes.append((x_min, y_min, x_max, y_max))
+    return bboxes  # Example bounding boxes
 
-img_no_text = zero_out_regions(orig, bboxes)
+def remove_text_from_image(image):
+    """
+    Removes text from an image by zeroing out the regions defined by bounding boxes.
+    """
+    bboxes = detect_text(image)
+    return zero_out_regions(image, bboxes), bboxes
+# Load images
+root_folder = 'data/mask_generation_test/312323'
+orig_path = f'{root_folder}/exam_mask.png'
+# proc_path = f'{root_folder}/311122/exam_mask_no_text_v3.png'  # previously saved original zeroed
+
+orig = cv2.imread(orig_path)
+
+img_no_text, bboxes = remove_text_from_image(orig)
 
 # Create original with rectangles
 orig_boxes = orig.copy()
