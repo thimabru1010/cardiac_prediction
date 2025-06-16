@@ -95,9 +95,11 @@ def extract_zoom_and_number(response_dict):
     Extrai os campos 'zoom' e 'numero' de um dicionário de resposta.
     """
     # Remove o simbolo '%' do campo 'zoom' e converte para float
+    print(response_dict)
+    print(int(response_dict['zoom'][:-1]))
     zoom = int(response_dict['zoom'][:-1]) / 100
     numero = response_dict['numero']
-    return zoom, numero
+    return zoom, int(numero)
 
 def extract_text_from_image(model_name: str, prompt: str, image_pil: Image.Image):
     """

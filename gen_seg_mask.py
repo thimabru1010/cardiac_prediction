@@ -7,9 +7,11 @@ from scipy.ndimage import zoom, affine_transform
 from skimage.registration import phase_cross_correlation
 from scipy.ndimage import shift  # or use cv2.warpAffine for integer shift
 import os
-from detect_text_in_image import extract_text_from_image
+from extract_text_from_image import extract_text_from_image
+from remove_text_from_image import remove_text_from_image
 import google.generativeai as genai # type: ignore
 from PIL import Image
+import re
 
 # --- Configuração da API Key ---
 # RECOMENDADO: Use uma variável de ambiente chamada GOOGLE_API_KEY
@@ -108,60 +110,44 @@ def align_mask_to_ct(
 
     return (aligned, warp_matrix) if return_warp else aligned
 
-
-def apply_window(img, center, width):
-    """Apply DICOM windowing."""
-    img = img.astype(np.float32)
-    min_val = center - width / 2
-    max_val = center + width / 2
-    img = np.clip(img, min_val, max_val)
-    img = (img - min_val) / (max_val - min_val) * 255.0
-    return img.astype(np.uint8)
-
 def window_level(arr, center=40, width=350):
     lo, hi = center - width/2, center + width/2
     arr = np.clip(arr, lo, hi)
     # return arr, (arr - lo) / (hi - lo)             # 0‑1 for imshow()
     return arr
 
-# Manual crop and resize (zoom effect)
-def crop_and_resize(img, zoom_factor):
-    # img: (y, x) or (y, x, c)
-    y, x = img.shape[-3], img.shape[-2]
-    crop_y = int(y / zoom_factor)
-    crop_x = int(x / zoom_factor)
-    start_y = (y - crop_y) // 2
-    start_x = (x - crop_x) // 2
-    if img.ndim == 2:
-        cropped = img[start_y:start_y+crop_y, start_x:start_x+crop_x]
-        resized = cv2.resize(cropped, (x, y), interpolation=cv2.INTER_LINEAR)
-    elif img.ndim == 3:
-        cropped = img[:, start_y:start_y+crop_y, start_x:start_x+crop_x]
-        resized = np.stack([
-            cv2.resize(cropped[z], (x, y), interpolation=cv2.INTER_LINEAR)
-            for z in range(cropped.shape[0])
-        ])
-    elif img.ndim == 4:
-        cropped = img[:, start_y:start_y+crop_y, start_x:start_x+crop_x, :]
-        resized = np.stack([
-            cv2.resize(cropped[z], (x, y), interpolation=cv2.INTER_LINEAR)
-            for z in range(cropped.shape[0])
-        ])
-    else:
-        raise RuntimeError("Unexpected mask image shape")
-    return resized
+def artifficial_zoom_crop(img: np.ndarray, zoom_factor: float) -> np.ndarray:
+    """
+    Crop the central region of an image (or volume) without resizing to simulate a zoom‐in.
 
-# Manual crop only (no resize)
-def crop_only(img, zoom_factor):
-    # img: (z, y, x) or (z, y, x, c) or (y, x)
+    Parameters
+    ----------
+    img : np.ndarray
+        Input image array. Supported shapes:
+          - 2D grayscale: (H, W)
+          - 3D volume or multi‐slice: (Z, H, W)
+          - 4D volume with channels:   (Z, H, W, C)
+    zoom_factor : float
+        Zoom factor > 1. The crop width is computed as W / zoom_factor
+        and then centered. E.g. zoom_factor=2 will take the middle half
+        of the width.
+
+    Returns
+    -------
+    np.ndarray
+        Cropped image (or volume) of identical dimensionality but
+        with the width reduced to int(W / zoom_factor).
+    """
     y, x = img.shape[0], img.shape[1]
-    print(x, y)
     crop_x = int(x / zoom_factor)
     start_x = (x - crop_x) // 2
     end_x = start_x + crop_x
+
     if img.ndim in [2, 3]:
+        # for shapes (H,W) or (Z,H,W)
         return img[:, start_x:end_x]
     elif img.ndim == 4:
+        # for shapes (Z,H,W,C)
         return img[:, :, start_x:end_x, :]
     else:
         raise RuntimeError("Unexpected mask image shape")
@@ -189,68 +175,64 @@ def hue_mask(hsv_array, hue_range, sat_thresh=30, val_thresh=30):
     mask_v = cv2.inRange(v, val_thresh, 255)   # suppress dark bg
     return cv2.bitwise_and(mask_h, mask_s, mask_v)   # binary 0/255
 
-if __name__ == "__main__":
-    dicom_folder = 'data/EXAMES/Patients_AutomatedMask/311122'
-    # files = [f for f in os.listdir(dicom_folder) if 'IA' in f]
-    # 1. Descubra todos os SeriesInstanceUIDs na pasta
+def load_dicoms(dicom_folder):
+    """
+    Load DICOM files from a folder and return gated and mask exams.
+    """
+    files = [f for f in os.listdir(dicom_folder) if f.endswith('.dcm')]
+    if not files:
+        raise ValueError(f"No DICOM files found in folder: {dicom_folder}")
+    # Exclude files containing 'SG'. Then, Filter series with files containing 'IA' or 'G{Number}'
+    files = [f for f in files if 'SG' not in f and ('IA' in f or 'G' in f)]
+    print(f"Filtered DICOM files: {files}")
+    mask_files = [f for f in files if 'IA' in f]
+    gated_files = [f for f in files if 'G' in f]
+    # sort G-files by their trailing number: G1 → G2 → … → G10 → G11 → …
+    gated_files.sort(key=lambda fn: int(re.search(r'G(\d+)', os.path.basename(fn)).group(1))) # type: ignore
+    mask_files.sort(key=lambda fn: int(re.search(r'IA(\d+)', os.path.basename(fn)).group(1))) # type: ignore
+    # Build full paths
+    gated_files = [os.path.join(dicom_folder, f) for f in gated_files]
+    mask_files = [os.path.join(dicom_folder, f) for f in mask_files]
+    print("Sorted G-files:", gated_files)
+    print("Sorted IA-files:", mask_files)
     reader = sitk.ImageSeriesReader()
-    series_IDs = reader.GetGDCMSeriesIDs(dicom_folder)
-    print("Séries encontradas:", series_IDs)
-    for series_uid in series_IDs:
-        file_list = reader.GetGDCMSeriesFileNames(dicom_folder, series_uid)
-        ds = pydicom.dcmread(file_list[0])
-        print(f"Series UID: {series_uid} | Description: {ds.SeriesDescription}")
-        if 'Gap Corrected ESCORE Cardiac' in ds.SeriesDescription:
-            print("Found the series with Gap Corrected ESCORE Cardiac")
-            # Read the series
-            file_list = list(file_list)
-            # print(file_list)
-            # Sort the file list by InstanceNumber
-            file_list.sort(key=lambda x: pydicom.dcmread(x).InstanceNumber)
-            # file_list.sort()
-            print(file_list)
-            reader.SetFileNames(file_list)
-            ct_img = reader.Execute()
-            print("CT image loaded successfully.")
-        if 'ESCORE IA' in ds.SeriesDescription:
-            print("Found the series with ESCORE IA")
-            # Read the series
-            # print(file_list)
-            file_list = list(file_list)
-            file_list.sort(key=lambda x: pydicom.dcmread(x).InstanceNumber)
-            print(file_list)
-            reader.SetFileNames(file_list)
-            mask_img = reader.Execute()
-            print("Mask image loaded successfully.")
+    print(pydicom.dcmread(mask_files[0]).SeriesDescription)
+    reader.SetFileNames(mask_files)
+    mask_img = reader.Execute()
+    reader = sitk.ImageSeriesReader()
+    reader.SetFileNames(gated_files)
+    ct_img = reader.Execute()
     print("CT image shape:", ct_img.GetSize())
     print("Mask image shape:", mask_img.GetSize())
+    return ct_img, mask_img
 
-    # dicom_path = 'data/EXAMES/Patients_AutomatedMask/311180/IA4.dcm'
-    # mask_img = sitk.ReadImage(dicom_path)
+
+if __name__ == "__main__":
+    dicom_folder = 'data/EXAMES/Patients_AutomatedMask/311122'
+    ct_img, mask_img = load_dicoms(dicom_folder)
 
     mask_np = sitk.GetArrayFromImage(mask_img)[1]  # (z, y, x) or (z, y, x, c)
-    ct_np = sitk.GetArrayFromImage(ct_img)[6]  # (z, y, x)
-    ct_slice = window_level(ct_np)       # Use first slice, apply window/level
-    # mask_np = window_level(mask_np)  # Apply window/level to mask
-    # zoom_factor = 1.57
     
     zoom_factor, slice_position = extract_text_from_image(
         model_name='gemini-2.0-flash-thinking-exp-01-21',
         prompt="Me retorne o que está escrito no canto inferior direito da imagem após a palavra 'Zoom:' e o número após o caracter '#'/ Me retorne um json contendo os seguintes campos: 'zoom' e 'numero'. O campo 'zoom' deve conter o texto após a palavra 'Zoom:' e o campo 'numero' deve conter o número após o caracter '#'.",
         image_pil=Image.fromarray(mask_np)) # type: ignore
     
+    
     print(f"Zoom factor: {zoom_factor} - Slice position: {slice_position}")
-    mask_np = remove_text_in_mask(mask_np)  # Remove text from mask
+    mask_np, _ = remove_text_from_image(mask_np)  # Remove text from mask
 
+    ct_np = sitk.GetArrayFromImage(ct_img)
+    print("CT image shape:", ct_np.shape)
+    # slice_coord = ct_np.shape[0] + 1 - slice_position + 1
+    print(f"Slice position: {slice_position}")
+    ct_np = ct_np[slice_position-1]  #! O indice 0 é o final da série
+    # ct_np = ct_np[slice_position - 3]  #! O indice 0 é o final da série
+    ct_slice = window_level(ct_np)       # Use first slice, apply window/level
+    
     # Apply manual crop (zoom effect, no resize)
     print(mask_np.shape)
-    if mask_np.ndim in [3, 4]:
-        cropped_mask_np = crop_only(mask_np, zoom_factor)
-    else:
-        raise RuntimeError("Unexpected mask image shape")
-    
-    # Remove the letters written from top to allow tight_crop
-    cropped_mask_np = cropped_mask_np[50:, :-50]
+    cropped_mask_np = artifficial_zoom_crop(mask_np, zoom_factor)
     
     cropped_mask_np = tight_crop(cropped_mask_np, thr=10)
 

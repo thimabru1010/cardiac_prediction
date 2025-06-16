@@ -57,38 +57,40 @@ def detect_text(image):
 
 def remove_text_from_image(image):
     """
-    Removes text from an image by zeroing out the regions defined by bounding boxes.
+    Removes text from an image with annotated labels by zeroing out the regions defined by bounding boxes.
     """
     bboxes = detect_text(image)
     return zero_out_regions(image, bboxes), bboxes
-# Load images
-root_folder = 'data/mask_generation_test/312323'
-orig_path = f'{root_folder}/exam_mask.png'
-# proc_path = f'{root_folder}/311122/exam_mask_no_text_v3.png'  # previously saved original zeroed
 
-orig = cv2.imread(orig_path)
+if __name__ == "__main__":
+    # Load images
+    root_folder = 'data/mask_generation_test/312323'
+    orig_path = f'{root_folder}/exam_mask.png'
+    # proc_path = f'{root_folder}/311122/exam_mask_no_text_v3.png'  # previously saved original zeroed
 
-img_no_text, bboxes = remove_text_from_image(orig)
+    orig = cv2.imread(orig_path)
 
-# Create original with rectangles
-orig_boxes = orig.copy()
-for (x1,y1,x2,y2) in bboxes:
-    cv2.rectangle(orig_boxes, (x1,y1), (x2,y2), (0,0,255), 4)
+    img_no_text, bboxes = remove_text_from_image(orig)
 
-# Plot side by side
-fig, axes = plt.subplots(1,2, figsize=(12,6))
-axes[0].imshow(cv2.cvtColor(orig_boxes, cv2.COLOR_BGR2RGB))
-axes[0].set_title('Original + Bounding Boxes')
-axes[0].axis('off')
+    # Create original with rectangles
+    orig_boxes = orig.copy()
+    for (x1,y1,x2,y2) in bboxes:
+        cv2.rectangle(orig_boxes, (x1,y1), (x2,y2), (0,0,255), 4)
 
-axes[1].imshow(cv2.cvtColor(img_no_text, cv2.COLOR_BGR2RGB))
-axes[1].set_title('Text Removed (No Boxes)')
-axes[1].axis('off')
+    # Plot side by side
+    fig, axes = plt.subplots(1,2, figsize=(12,6))
+    axes[0].imshow(cv2.cvtColor(orig_boxes, cv2.COLOR_BGR2RGB))
+    axes[0].set_title('Original + Bounding Boxes')
+    axes[0].axis('off')
 
-img_no_text_path = os.path.join(root_folder, 'exam_mask_no_text.png')
-cv2.imwrite(img_no_text_path, img_no_text)
+    axes[1].imshow(cv2.cvtColor(img_no_text, cv2.COLOR_BGR2RGB))
+    axes[1].set_title('Text Removed (No Boxes)')
+    axes[1].axis('off')
 
-plt.tight_layout()
-plt.show()
+    img_no_text_path = os.path.join(root_folder, 'exam_mask_no_text.png')
+    cv2.imwrite(img_no_text_path, img_no_text)
+
+    plt.tight_layout()
+    plt.show()
 
 
