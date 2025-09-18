@@ -16,7 +16,7 @@ import re
 # --- Configuração da API Key ---
 # RECOMENDADO: Use uma variável de ambiente chamada GOOGLE_API_KEY
 try:
-    api_key = "AIzaSyBrPHg64ZYQaiQmTw5oCvy9luZ8bvQTDHE"
+    api_key = "AIzaSyDZfAbiG6zTY49udgvsd56GvkmmEowEEm8"
     genai.configure(api_key=api_key)
     print("API Key configurada via variável de ambiente GOOGLE_API_KEY.")
 except KeyError:
