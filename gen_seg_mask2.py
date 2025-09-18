@@ -40,9 +40,9 @@ criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 5000, 1e-7)
     warpMatrix=warp_matrix,
     motionType=warp_mode,
     criteria=criteria,
-    inputMask=None,
+    inputMask=None, # type: ignore
     gaussFiltSize=5
-)
+) # type: ignore
 
 # Warp the mask image (color) to CT space
 aligned_mask_rgb = cv2.warpAffine(

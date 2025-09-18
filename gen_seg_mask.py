@@ -86,9 +86,9 @@ def align_mask_to_ct(
         warpMatrix=warp_matrix,
         motionType=motion,
         criteria=criteria,
-        inputMask=None,
+        inputMask=None, # type: ignore
         gaussFiltSize=gauss_filt_size,
-    )
+    ) # type: ignore
 
     # aplica a deformação na máscara original (RGB ou cinza)
     if motion == cv2.MOTION_HOMOGRAPHY:
@@ -169,10 +169,10 @@ def hue_mask(hsv_array, hue_range, sat_thresh=30, val_thresh=30):
     if lo <= hi:
         mask_h = cv2.inRange(h, lo, hi)
     else:                              # wrap-around (red)
-        mask_h = cv2.bitwise_or(cv2.inRange(h, 0, hi),
-                                cv2.inRange(h, lo, 179))
-    mask_s = cv2.inRange(s, sat_thresh, 255)   # suppress grey text
-    mask_v = cv2.inRange(v, val_thresh, 255)   # suppress dark bg
+        mask_h = cv2.bitwise_or(cv2.inRange(h, 0, hi), # type: ignore
+                                cv2.inRange(h, lo, 179)) # type: ignore
+    mask_s = cv2.inRange(s, sat_thresh, 255)   # type: ignore # suppress grey text
+    mask_v = cv2.inRange(v, val_thresh, 255)   # type: ignore # suppress dark bg
     return cv2.bitwise_and(mask_h, mask_s, mask_v)   # binary 0/255
 
 def load_dicoms(dicom_folder):
@@ -208,7 +208,7 @@ def load_dicoms(dicom_folder):
 
 
 if __name__ == "__main__":
-    dicom_folder = 'data/EXAMES/Patients_AutomatedMask/311122'
+    dicom_folder = 'data/EXAMES/Patients_AutomatedMask/311180'
     ct_img, mask_img = load_dicoms(dicom_folder)
 
     mask_np = sitk.GetArrayFromImage(mask_img)[1]  # (z, y, x) or (z, y, x, c)
