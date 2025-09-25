@@ -1,9 +1,12 @@
 import os
 from PIL import Image
 import google.generativeai as genai # type: ignore
+from openai import OpenAI
 import json
 import re
-
+import base64
+import cv2
+import numpy as np
 # --- Configuração da API Key ---
 # RECOMENDADO: Use uma variável de ambiente chamada GOOGLE_API_KEY
 try:
@@ -14,6 +17,10 @@ except KeyError:
     print("ERRO: A variável de ambiente GOOGLE_API_KEY não está definida.")
     print("Por favor, defina GOOGLE_API_KEY com sua chave API.")
     exit() # Saia se a chave não estiver configurada
+
+def encode_npy_image_png(npy_array):
+    _, buffer = cv2.imencode('.png', npy_array)  # Sem perda de qualidade
+    return base64.b64encode(buffer).decode('utf-8')
 
 # --- Função para carregar a imagem ---
 def load_image_from_path(image_path):
@@ -74,6 +81,21 @@ def interact_with_gemini(model_name: str, prompt_text: str, image_pil: Image.Ima
         print(f"Ocorreu um erro ao interagir com a API: {e}")
         return None
 
+def interact_with_openai(client: OpenAI, model_name: str, prompt_text: str, base64_npy_image: str = None): # type: ignore
+    response = client.responses.create(
+    model=model_name,
+    input=[
+            {
+                "role": "user",
+                "content": [
+                    { "type": "input_text", "text": prompt_text },
+                    { "type": "input_image", "image_url": f"data:image/png;base64,{base64_npy_image}" },
+                ],
+            }
+        ],
+    )
+    return response.output_text
+
 def post_process_response(response_text):
     """
     Procura primeiro bloco de texto que começa e termina com chaves
@@ -101,7 +123,7 @@ def extract_zoom_and_number(response_dict):
     numero = response_dict['numero']
     return zoom, int(numero)
 
-def extract_text_from_image(model_name: str, prompt: str, image_pil: Image.Image):
+def extract_text_from_image(client: OpenAI, model_name: str, prompt: str, image_npy: np.ndarray):
     """
     Detecta texto em uma imagem usando o modelo Gemini.
 
@@ -113,7 +135,8 @@ def extract_text_from_image(model_name: str, prompt: str, image_pil: Image.Image
     Returns:
         Um dicionário com os campos 'zoom' e 'numero' extraídos da resposta.
     """
-    response = interact_with_gemini(model_name, prompt, image_pil)
+    # response = interact_with_gemini(model_name, prompt, image_pil)
+    response = interact_with_openai(client, model_name, prompt, encode_npy_image_png(np.array(image_npy)))  # type: ignore
     if response:
         response_dict = post_process_response(response)
         if response_dict:

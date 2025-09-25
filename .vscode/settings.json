@@ -1,0 +1,27 @@
+{
+    "python.analysis.typeCheckingMode": "standard",
+    "python.analysis.diagnosticSeverityOverrides": {
+        "reportGeneralTypeIssues": "information",
+        "reportArgumentType": "none",
+        "reportAssignmentType": "none",
+        "reportAttributeAccessIssue": "information",
+        "reportCallIssue": "information",
+        "reportIndexIssue": "information",
+        "reportInvalidTypeVarUse": "none",
+        "reportOperatorIssue": "none",
+        "reportOptionalCall": "none",
+        "reportOptionalIterable": "none",
+        "reportOptionalMemberAccess": "none",
+        "reportOptionalOperand": "none",
+        "reportOptionalSubscript": "none",
+        "reportPossiblyUnboundVariable": "none",
+        "reportReturnType": "information",
+        "reportTypedDictNotRequiredAccess": "none",
+        "reportUnboundVariable": "error",
+        "reportUndefinedVariable": "error",
+        "reportMissingImports": "error",
+        "reportPrivateUsage": "none",
+        "reportPrivateImportUsage": "none"
+    },
+    "python.analysis.diagnosticMode": "openFilesOnly"
+}

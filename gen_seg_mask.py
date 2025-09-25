@@ -11,6 +11,7 @@ from extract_text_from_image import extract_text_from_image
 from remove_text_from_image import remove_text_from_image
 import google.generativeai as genai # type: ignore
 from PIL import Image
+from openai import OpenAI
 import re
 
 # --- Configuração da API Key ---
@@ -80,6 +81,7 @@ def align_mask_to_ct(
 
     criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, n_iter, eps)
 
+    # Finds the best warp_matrix using ECC
     _ = cv2.findTransformECC(
         templateImage=ct_f,
         inputImage=mask_f,
@@ -208,19 +210,36 @@ def load_dicoms(dicom_folder):
 
 
 if __name__ == "__main__":
-    dicom_folder = 'data/EXAMES/Patients_AutomatedMask/311180'
+    # dicom_folder = 'data/EXAMES/Patients_AutomatedMask/311180'
+    dicom_folder = 'data/ExamesArya/170514'
     ct_img, mask_img = load_dicoms(dicom_folder)
 
     mask_np = sitk.GetArrayFromImage(mask_img)[1]  # (z, y, x) or (z, y, x, c)
     
-    zoom_factor, slice_position = extract_text_from_image(
-        model_name='gemini-2.0-flash-thinking-exp-01-21',
-        prompt="Me retorne o que está escrito no canto inferior direito da imagem após a palavra 'Zoom:' e o número após o caracter '#'/ Me retorne um json contendo os seguintes campos: 'zoom' e 'numero'. O campo 'zoom' deve conter o texto após a palavra 'Zoom:' e o campo 'numero' deve conter o número após o caracter '#'.",
-        image_pil=Image.fromarray(mask_np)) # type: ignore
+    # zoom_factor, slice_position = extract_text_from_image(
+    #     model_name='gemini-2.0-flash-thinking-exp-01-21',
+    #     prompt="Me retorne o que está escrito no canto inferior direito da imagem após a palavra 'Zoom:' e o número após o caracter '#'/ Me retorne um json contendo os seguintes campos: 'zoom' e 'numero'. O campo 'zoom' deve conter o texto após a palavra 'Zoom:' e o campo 'numero' deve conter o número após o caracter '#'.",
+    #     image_pil=Image.fromarray(mask_np)) # type: ignore
     
+    client = OpenAI()
+    # zoom_factor, slice_position = extract_text_from_image(
+    #     client=client,
+    #     model_name='gpt-4.1',
+    #     prompt="Me retorne o que está escrito no canto inferior direito da imagem após a palavra 'Zoom:' e o número após o caracter '#'/ Me retorne um json contendo os seguintes campos: 'zoom' e 'numero'. O campo 'zoom' deve conter o texto após a palavra 'Zoom:' e o campo 'numero' deve conter o número após o caracter '#'.",
+    #     image_npy=mask_np) # type: ignore
     
+    zoom_factor = 1.71
+    slice_position = 23
     print(f"Zoom factor: {zoom_factor} - Slice position: {slice_position}")
-    mask_np, _ = remove_text_from_image(mask_np)  # Remove text from mask
+    mask_np, boxes = remove_text_from_image(mask_np)  # Remove text from mask
+    #Save the mask for debugging
+    cv2.imwrite('data/mask_no_text.png', mask_np)
+    
+    # Draw boxes for debugging
+    mask_np_boxes = mask_np.copy()
+    for (x0, y0, x1, y1) in boxes:
+        cv2.rectangle(mask_np_boxes, (x0, y0), (x1, y1), (0, 0, 255), 2)
+    cv2.imwrite('data/mask_no_text_boxes.png', mask_np_boxes)
 
     ct_np = sitk.GetArrayFromImage(ct_img)
     print("CT image shape:", ct_np.shape)
@@ -229,6 +248,7 @@ if __name__ == "__main__":
     ct_np = ct_np[slice_position-1]  #! O indice 0 é o final da série
     # ct_np = ct_np[slice_position - 3]  #! O indice 0 é o final da série
     ct_slice = window_level(ct_np)       # Use first slice, apply window/level
+    # ct_slice = ct_np
     
     # Apply manual crop (zoom effect, no resize)
     print(mask_np.shape)
@@ -263,6 +283,7 @@ if __name__ == "__main__":
     calc_candidates[ct_slice > 130] = 1
     ct_slice2 = ct_slice.copy()
     ct_slice2 = (ct_slice2 - ct_slice2.min()) / (ct_slice2.max() - ct_slice2.min())
+    
     axs[0,0].imshow(ct_slice2, cmap='gray')
     axs[0,0].set_title("CT image (window/level)")
     axs[0,0].axis('off')
@@ -309,7 +330,7 @@ if __name__ == "__main__":
 
     mask_segs = cv2.cvtColor(mask_resized, cv2.COLOR_RGB2HSV)
     
-    mask_segs = hue_mask(mask_segs, GREEN)
+    mask_segs = hue_mask(mask_segs, BLUE)
 
     # optional clean-up: remove isolated edge noise
     # kernel = np.ones((3,3), np.uint8)
