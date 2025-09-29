@@ -69,8 +69,26 @@ def align_mask_to_ct(
     else:
         ct_gray = ct_img.copy()
 
+    # mask_f = cv2.normalize(mask_gray, None, 0.0, 1.0, cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+    # ct_f = cv2.normalize(ct_gray, None, 0.0, 1.0, cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+    
     mask_f = mask_gray.astype(np.float32) / 255.0
     ct_f   = ct_gray.astype(np.float32)   / 255.0
+    
+    # Verifique se há NaN/Inf nas imagens
+    print("Mask stats:", mask_f.min(), mask_f.max(), np.isnan(mask_f).any(), np.isinf(mask_f).any())
+    print("CT stats:", ct_f.min(), ct_f.max(), np.isnan(ct_f).any(), np.isinf(ct_f).any())
+
+    print("Mask shape:", mask_f.shape)
+    print("CT shape:", ct_f.shape)
+    
+    # Verifique se há variação suficiente
+    print("Mask variance:", np.var(mask_f))
+    print("CT variance:", np.var(ct_f))
+    
+    # Verificação de variância
+    if np.var(ct_f) < 1e-6:
+        print("WARNING: CT variance too low, skipping alignment")
 
     # matriz inicial (identidade)
     warp_matrix = (
@@ -110,7 +128,7 @@ def align_mask_to_ct(
             borderMode=cv2.BORDER_TRANSPARENT,
         )
 
-    return (aligned, warp_matrix) if return_warp else aligned
+    return aligned
 
 def window_level(arr, center=40, width=350):
     lo, hi = center - width/2, center + width/2
@@ -211,10 +229,10 @@ def load_dicoms(dicom_folder):
 
 if __name__ == "__main__":
     # dicom_folder = 'data/EXAMES/Patients_AutomatedMask/311180'
-    dicom_folder = 'data/ExamesArya/170514'
+    dicom_folder = 'data/ExamesArya/175647'
     ct_img, mask_img = load_dicoms(dicom_folder)
 
-    mask_np = sitk.GetArrayFromImage(mask_img)[1]  # (z, y, x) or (z, y, x, c)
+    mask_np = sitk.GetArrayFromImage(mask_img)[3]  # (z, y, x) or (z, y, x, c)
     
     # zoom_factor, slice_position = extract_text_from_image(
     #     model_name='gemini-2.0-flash-thinking-exp-01-21',
@@ -228,18 +246,21 @@ if __name__ == "__main__":
     #     prompt="Me retorne o que está escrito no canto inferior direito da imagem após a palavra 'Zoom:' e o número após o caracter '#'/ Me retorne um json contendo os seguintes campos: 'zoom' e 'numero'. O campo 'zoom' deve conter o texto após a palavra 'Zoom:' e o campo 'numero' deve conter o número após o caracter '#'.",
     #     image_npy=mask_np) # type: ignore
     
-    zoom_factor = 1.71
-    slice_position = 23
+    zoom_factor = 1.51
+    slice_position = 34
     print(f"Zoom factor: {zoom_factor} - Slice position: {slice_position}")
+    cv2.imwrite('data/Debug/mask_text.png', mask_np)
     mask_np, boxes = remove_text_from_image(mask_np)  # Remove text from mask
     #Save the mask for debugging
-    cv2.imwrite('data/mask_no_text.png', mask_np)
+    cv2.imwrite('data/Debug/mask_no_text.png', mask_np)
     
     # Draw boxes for debugging
+    colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0)]
     mask_np_boxes = mask_np.copy()
-    for (x0, y0, x1, y1) in boxes:
-        cv2.rectangle(mask_np_boxes, (x0, y0), (x1, y1), (0, 0, 255), 2)
-    cv2.imwrite('data/mask_no_text_boxes.png', mask_np_boxes)
+    for (i, (x0, y0, x1, y1)) in enumerate(boxes):
+        print(f"Box {i}: ({x0}, {y0}), ({x1}, {y1})", colors[i])
+        cv2.rectangle(mask_np_boxes, (x0, y0), (x1, y1), colors[i], 2)
+    cv2.imwrite('data/Debug/mask_no_text_boxes.png', mask_np_boxes)
 
     ct_np = sitk.GetArrayFromImage(ct_img)
     print("CT image shape:", ct_np.shape)
@@ -249,6 +270,7 @@ if __name__ == "__main__":
     # ct_np = ct_np[slice_position - 3]  #! O indice 0 é o final da série
     ct_slice = window_level(ct_np)       # Use first slice, apply window/level
     # ct_slice = ct_np
+    cv2.imwrite('data/Debug/ct_slice.png', ct_slice)
     
     # Apply manual crop (zoom effect, no resize)
     print(mask_np.shape)
@@ -270,7 +292,7 @@ if __name__ == "__main__":
     mask_resized = cv2.morphologyEx(mask_resized, cv2.MORPH_OPEN, kernel)
     # mask_resized = cropped_mask_np.copy()
     
-    mask_resized, W = align_mask_to_ct(mask_resized, ct_slice, return_warp=True)
+    mask_resized = align_mask_to_ct(mask_resized, ct_slice, return_warp=True)
 
     print(mask_resized.shape, mask_resized.min(), mask_resized.max())
     print(ct_slice.shape, ct_slice.min(), ct_slice.max())

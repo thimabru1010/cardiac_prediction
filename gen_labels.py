@@ -64,10 +64,16 @@ if __name__ == "__main__":
     patients = os.listdir(root_path)
     patients_error = []
     
+    # Filter patients already processed
+    patients_processed = os.listdir(root_output)
+    patients = [p for p in patients if p not in patients_processed]
+    print(f"Patients already processed: {len(patients_processed)}")
+    print(f"Patients to process: {len(patients)}")
+    
     client = OpenAI()
     # Load IA.dcm images and generates mask labels from it
     for patient in tqdm(patients):
-        print("Preprocessing patient:", patient)
+        print("\n\nPreprocessing patient:", patient)
         # load dicom images
         patient_path = os.path.join(root_path, patient)
         ct_img, mask_img = load_dicoms(patient_path)
@@ -123,7 +129,7 @@ if __name__ == "__main__":
             create_save_nifti(cropped_mask_resized, np.eye(4), os.path.join(debug_patient_folder, f"{patient}_slice{slice_position:03d}_mask.nii.gz"))
             create_save_nifti(ct_slice, np.eye(4), os.path.join(debug_patient_folder, f"{patient}_slice{slice_position:03d}_ct.nii.gz"))
             
-            cropped_mask_resized, W = align_mask_to_ct(cropped_mask_resized, ct_slice, return_warp=True)
+            cropped_mask_resized = align_mask_to_ct(cropped_mask_resized, ct_slice, return_warp=True)
 
             print(cropped_mask_resized.shape, cropped_mask_resized.min(), cropped_mask_resized.max())
             print(ct_slice.shape, ct_slice.min(), ct_slice.max())
@@ -168,5 +174,5 @@ if __name__ == "__main__":
         save_as_nifti(calc_masks, os.path.join(root_output, patient, f"{patient}_mask.nii.gz"), spacing=ct_img.GetSpacing())
         save_as_nifti(ct_exams, os.path.join(root_output, patient, f"{patient}_gated_prep.nii.gz"), spacing=ct_img.GetSpacing())
         print("Saved patient:", patient)
-        break
+
     print('Finished')

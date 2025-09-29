@@ -17,7 +17,7 @@ def zero_out_regions(img: np.ndarray, bboxes):
         out[y1:y2 + 1, x1:x2 + 1] = 0
     return out
 
-def bbox_coords(mask):
+def find_text(mask):
     coords = np.column_stack(np.where(mask))
     if coords.size == 0:
         return None
@@ -25,35 +25,82 @@ def bbox_coords(mask):
     y_max, x_max = coords.max(axis=0)
     return x_min, y_min, x_max, y_max
 
+def get_corner_rectangles(image_shape):
+    """
+    Retorna as coordenadas dos 4 retângulos nos cantos da imagem.
+    Formato: (x_min, y_min, x_max, y_max)
+    """
+    h, w = image_shape[:2]  # height, width
+    m = 0.35  # 35% de cada dimensão
+    
+    rectangles = {
+        'top_left': (
+            0,              # x_min
+            0,              # y_min  
+            int(w * m) + 100,     # x_max (35% da largura)
+            int(h * m) + 50    # y_max (35% da altura)
+        ),
+        
+        'top_right': (
+            int(w * (1-m)) - 200, # x_min (65% da largura)
+            0,              # y_min
+            w,              # x_max (100% da largura)
+            int(h * m) + 50     # y_max (35% da altura)
+        ),
+        
+        'bottom_left': (
+            0,              # x_min
+            int(h * (1-m)), # y_min (65% da altura)
+            int(w * m),     # x_max (35% da largura)
+            h               # y_max (100% da altura)
+        ),
+        
+        'bottom_right': (
+            int(w * (1-m)), # x_min (65% da largura) 
+            int(h * (1-m)), # y_min (65% da altura)
+            w,              # x_max (100% da largura)
+            h               # y_max (100% da altura)
+        )
+    }
+    
+    return rectangles
+
 def detect_text(image):
     """
     Detects text in an image and returns bounding boxes.
     This is a placeholder function. Replace with actual text detection logic.
     """
     h, w, _ = image.shape
+    print(f"Image shape: {image.shape}")
 
     # Detect text for bboxes again
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     _, mask = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
-    m = 0.35
-    zones = {
-        'top_left':   (slice(0, int(h*m)), slice(0, int(w*m))),
-        'top_right':  (slice(0, int(h*m)), slice(int(w*(1-m)), w)),
-        'bottom_left':(slice(int(h*(1-m)), h), slice(0, int(w*m))),
-        'bottom_right':(slice(int(h*(1-m)), h), slice(int(w*(1-m)), w))
-    }
+    # m = 0.25
+    # (x_min, y_min, x_max, y_max)
+    zones = get_corner_rectangles(image.shape)
+    # zones = [zones['bottom_right']]  # testar só bottom_right
     bboxes = []
-    for name, (ys, xs) in zones.items():
-        bbox = bbox_coords(mask[ys, xs] == 255)
+    #! No dataset baixado só tem texto no bottom_right
+    # bboxes.append((zones['bottom_left'][0], zones['bottom_left'][1], zones['bottom_left'][2], zones['bottom_left'][3]))
+    # bboxes.append((zones['bottom_right'][0], zones['bottom_right'][1], zones['bottom_right'][2], zones['bottom_right'][3]))
+    # bboxes.append((zones['top_left'][0], zones['top_left'][1], zones['top_left'][2], zones['top_left'][3]))
+    # bboxes.append((zones['top_right'][0], zones['top_right'][1], zones['top_right'][2], zones['top_right'][3]))
+    # print("DEBUG Detecting text in zones...")
+    for name, (xmin_ori, ymin_ori, xmax_ori, ymax_ori) in zones.items():
+        if name not in ['bottom_right']:
+            continue
+        bbox = find_text(mask[ymin_ori:ymax_ori, xmin_ori:xmax_ori] == 255) # (x_min, y_min, x_max, y_max) dentro da região
+        # print((ymin_ori, ymax_ori), bbox)
         if bbox:
             x_min, y_min, x_max, y_max = bbox
-            x_min += xs.start; x_max += xs.start
-            y_min += ys.start; y_max += ys.start
+            x_min += xmin_ori; x_max += xmin_ori
+            y_min += ymin_ori; y_max += ymin_ori
             margin = 5
             x_min = max(0, x_min-margin); y_min = max(0, y_min-margin)
             x_max = min(w-1, x_max+margin); y_max = min(h-1, y_max+margin)
             bboxes.append((x_min, y_min, x_max, y_max))
-    return bboxes  # Example bounding boxes
+    return bboxes
 
 def remove_text_from_image(image):
     """
