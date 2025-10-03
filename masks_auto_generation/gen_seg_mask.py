@@ -7,12 +7,13 @@ from scipy.ndimage import zoom, affine_transform
 from skimage.registration import phase_cross_correlation
 from scipy.ndimage import shift  # or use cv2.warpAffine for integer shift
 import os
-from extract_text_from_image import extract_text_from_image
-from remove_text_from_image import remove_text_from_image
+from masks_auto_generation.extract_text_from_image import extract_text_from_image
+from masks_auto_generation.remove_text_from_image import remove_text_from_image
 import google.generativeai as genai # type: ignore
 from PIL import Image
 from openai import OpenAI
 import re
+from masks_auto_generation.utils import plot_masks_and_exams_overlay, hue_mask, plot_compare_alignment
 
 # --- Configuração da API Key ---
 # RECOMENDADO: Use uma variável de ambiente chamada GOOGLE_API_KEY
@@ -109,7 +110,7 @@ def align_mask_to_ct(
         inputMask=None, # type: ignore
         gaussFiltSize=gauss_filt_size,
     ) # type: ignore
-
+        
     # aplica a deformação na máscara original (RGB ou cinza)
     if motion == cv2.MOTION_HOMOGRAPHY:
         aligned = cv2.warpPerspective(
@@ -178,22 +179,12 @@ def tight_crop(arr, thr=10):
         mask = arr
     else:
         mask = arr.mean(-1)
+    # Find non-zero pixels
     ys, xs = np.where(mask > thr)
+    # Get the lowest coordinate (not value) of each axis
     y0, y1 = int(ys.min()), int(ys.max())
     x0, x1 = int(xs.min()), int(xs.max())
     return arr[y0:y1+1, x0:x1+1, ...]
-
-def hue_mask(hsv_array, hue_range, sat_thresh=30, val_thresh=30):
-    h, s, v = cv2.split(hsv_array)
-    lo, hi = hue_range
-    if lo <= hi:
-        mask_h = cv2.inRange(h, lo, hi)
-    else:                              # wrap-around (red)
-        mask_h = cv2.bitwise_or(cv2.inRange(h, 0, hi), # type: ignore
-                                cv2.inRange(h, lo, 179)) # type: ignore
-    mask_s = cv2.inRange(s, sat_thresh, 255)   # type: ignore # suppress grey text
-    mask_v = cv2.inRange(v, val_thresh, 255)   # type: ignore # suppress dark bg
-    return cv2.bitwise_and(mask_h, mask_s, mask_v)   # binary 0/255
 
 def load_dicoms(dicom_folder):
     """
@@ -229,10 +220,10 @@ def load_dicoms(dicom_folder):
 
 if __name__ == "__main__":
     # dicom_folder = 'data/EXAMES/Patients_AutomatedMask/311180'
-    dicom_folder = 'data/ExamesArya/175647'
+    dicom_folder = 'data/ExamesArya/281715'
     ct_img, mask_img = load_dicoms(dicom_folder)
 
-    mask_np = sitk.GetArrayFromImage(mask_img)[3]  # (z, y, x) or (z, y, x, c)
+    mask_np = sitk.GetArrayFromImage(mask_img)[-1]  # (z, y, x) or (z, y, x, c)
     
     # zoom_factor, slice_position = extract_text_from_image(
     #     model_name='gemini-2.0-flash-thinking-exp-01-21',
@@ -240,23 +231,27 @@ if __name__ == "__main__":
     #     image_pil=Image.fromarray(mask_np)) # type: ignore
     
     client = OpenAI()
-    # zoom_factor, slice_position = extract_text_from_image(
-    #     client=client,
-    #     model_name='gpt-4.1',
-    #     prompt="Me retorne o que está escrito no canto inferior direito da imagem após a palavra 'Zoom:' e o número após o caracter '#'/ Me retorne um json contendo os seguintes campos: 'zoom' e 'numero'. O campo 'zoom' deve conter o texto após a palavra 'Zoom:' e o campo 'numero' deve conter o número após o caracter '#'.",
-    #     image_npy=mask_np) # type: ignore
+    zoom_factor, slice_position = extract_text_from_image(
+        client=client,
+        model_name='gpt-4.1',
+        prompt="Me retorne o que está escrito no canto inferior direito da imagem após a palavra 'Zoom:' e o número após o caracter '#'/ Me retorne um json contendo os seguintes campos: 'zoom' e 'numero'. O campo 'zoom' deve conter o texto após a palavra 'Zoom:' e o campo 'numero' deve conter o número após o caracter '#'.",
+        image_npy=mask_np) # type: ignore
     
-    zoom_factor = 1.51
-    slice_position = 34
+    # zoom_factor = 1.51
+    # slice_position = 9
     print(f"Zoom factor: {zoom_factor} - Slice position: {slice_position}")
     cv2.imwrite('data/Debug/mask_text.png', mask_np)
     mask_np, boxes = remove_text_from_image(mask_np)  # Remove text from mask
+    orig_mask_np = mask_np.copy()
     #Save the mask for debugging
     cv2.imwrite('data/Debug/mask_no_text.png', mask_np)
     
     # Draw boxes for debugging
     colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0)]
+    morphEx_kernel = np.ones((3,3), np.uint8)
+    morphEx_kernel_big = np.ones((5,5), np.uint8)
     mask_np_boxes = mask_np.copy()
+    
     for (i, (x0, y0, x1, y1)) in enumerate(boxes):
         print(f"Box {i}: ({x0}, {y0}), ({x1}, {y1})", colors[i])
         cv2.rectangle(mask_np_boxes, (x0, y0), (x1, y1), colors[i], 2)
@@ -267,16 +262,21 @@ if __name__ == "__main__":
     # slice_coord = ct_np.shape[0] + 1 - slice_position + 1
     print(f"Slice position: {slice_position}")
     ct_np = ct_np[slice_position-1]  #! O indice 0 é o final da série
-    # ct_np = ct_np[slice_position - 3]  #! O indice 0 é o final da série
     ct_slice = window_level(ct_np)       # Use first slice, apply window/level
-    # ct_slice = ct_np
     cv2.imwrite('data/Debug/ct_slice.png', ct_slice)
     
     # Apply manual crop (zoom effect, no resize)
     print(mask_np.shape)
     cropped_mask_np = artifficial_zoom_crop(mask_np, zoom_factor)
+    cv2.imwrite('data/Debug/artificial_zoom.png', cropped_mask_np)
+    
+    # Remove as letras que orientam o exame
+    # cropped_mask_np = cv2.morphologyEx(cropped_mask_np, cv2.MORPH_OPEN, morphEx_kernel_big)
     
     cropped_mask_np = tight_crop(cropped_mask_np, thr=10)
+    cv2.imwrite('data/Debug/artificial_zoom_tight_crop.png', cropped_mask_np)
+    
+    no_zoom_mask_np = tight_crop(orig_mask_np, thr=10)
 
     print(ct_slice.shape)
     print(ct_slice.min(), ct_slice.max())
@@ -285,94 +285,32 @@ if __name__ == "__main__":
     # Resize cropped mask to 512×512 for plotting
     target_size = (512, 512)
     
+    no_zoom_mask_np = cv2.resize(no_zoom_mask_np, target_size, interpolation=cv2.INTER_NEAREST_EXACT)
     mask_resized = cv2.resize(cropped_mask_np, target_size, interpolation=cv2.INTER_NEAREST_EXACT)
     ct_slice = cv2.resize(ct_slice, target_size, interpolation=cv2.INTER_LANCZOS4)
     
-    kernel = np.ones((3,3), np.uint8)
-    mask_resized = cv2.morphologyEx(mask_resized, cv2.MORPH_OPEN, kernel)
-    # mask_resized = cropped_mask_np.copy()
+    cv2.imwrite('data/Debug/mask_resized.png', mask_resized)
+    # Remove as letras que orientam o exame
+    mask_resized = cv2.morphologyEx(mask_resized, cv2.MORPH_OPEN, morphEx_kernel)
+    mask_resized = tight_crop(mask_resized, thr=0)
     
-    mask_resized = align_mask_to_ct(mask_resized, ct_slice, return_warp=True)
+    cv2.imwrite('data/Debug/mask_resized_filtered.png', mask_resized)
+    
+    aligned_mask = align_mask_to_ct(mask_resized, ct_slice, return_warp=True)
 
-    print(mask_resized.shape, mask_resized.min(), mask_resized.max())
+    cv2.imwrite('data/Debug/aligned_mask.png', aligned_mask)
+    print(aligned_mask.shape, aligned_mask.min(), aligned_mask.max())
     print(ct_slice.shape, ct_slice.min(), ct_slice.max())
-    # Plot CT, cropped mask, and overlay
-    fig, axs = plt.subplots(2, 3, figsize=(18, 12))
 
     # first row
     calc_candidates = ct_slice.copy()
     calc_candidates[ct_slice < 130] = 0
     calc_candidates[ct_slice > 130] = 1
-    ct_slice2 = ct_slice.copy()
-    ct_slice2 = (ct_slice2 - ct_slice2.min()) / (ct_slice2.max() - ct_slice2.min())
-    
-    axs[0,0].imshow(ct_slice2, cmap='gray')
-    axs[0,0].set_title("CT image (window/level)")
-    axs[0,0].axis('off')
+    ct_slice_norm = ct_slice.copy()
+    ct_slice_norm = (ct_slice_norm - ct_slice_norm.min()) / (ct_slice_norm.max() - ct_slice_norm.min())
 
-    # Show resized mask
-    # if mask_resized.ndim == 2:
-    #     axs[1].imshow(mask_resized, cmap='gray')
-    # else:
-    print(mask_resized.shape)
-    calc_candidates = np.stack([
-        calc_candidates,
-        calc_candidates,
-        calc_candidates
-    ], axis=-1)
-    # Apply color map
-    print(mask_resized.shape, mask_resized.min(), mask_resized.max())
-    mask_resized2 = mask_resized.copy()
-    # mask_resized2 = (mask_resized2 - mask_resized2.min()) / (mask_resized2.max() - mask_resized2.min())
-    axs[0,1].imshow(mask_resized2)
-        
-    axs[0,1].set_title(f"Cropped mask_img (zoom={zoom_factor})")
-    axs[0,1].axis('off')
-
-    # Overlay CT with mask at 50% opacity
-    axs[0,2].imshow(ct_slice, cmap='gray')
-    axs[0,2].imshow(mask_resized, cmap='jet', alpha=0.5)
-    axs[0,2].set_title("Overlay")
-    axs[0,2].axis('off')
+    plot_masks_and_exams_overlay(ct_slice_norm, aligned_mask, calc_candidates)
     
-    cv2.imwrite('data/ct_slice.png', ct_slice)
-    cv2.imwrite('data/mask_resized.png', mask_resized)
-
-    # second row (repeat or replace with other images)
-    axs[1,0].imshow(calc_candidates, cmap='gray')
-    axs[1,0].set_title("Calcifications")
-    axs[1,0].axis('off')
-    
-    # mask_segs = mask_resized * calc_candidates
-    RED1  = (0,   5)      # 0°-10°
-    RED2  = (170, 179)    # 340°-360°
-    GREEN = (50,  80)     # 100°-160°  (LAD in your screenshots)
-    BLUE  = (100,130)     # 200°-260°  (CX)
-    PINK  = (145,175)     # 290°-350°  (calcification contour)
-
-    mask_segs = cv2.cvtColor(mask_resized, cv2.COLOR_RGB2HSV)
-    
-    mask_segs = hue_mask(mask_segs, BLUE)
-
-    # optional clean-up: remove isolated edge noise
-    # kernel = np.ones((3,3), np.uint8)
-    # mask_segs = cv2.morphologyEx(mask_segs, cv2.MORPH_OPEN, kernel)
-
-    print(mask_segs.shape, mask_segs.min(), mask_segs.max())
-    
-    mask_segs2 = mask_segs * calc_candidates[:, :, 0]
-    
-    axs[1,1].imshow(mask_segs2, cmap='gray')
-    axs[1,1].set_title("Mask")
-    axs[1,1].axis('off')
-    
-    axs[1,2].imshow(ct_slice, cmap='gray')
-    axs[1,2].imshow(mask_segs2, cmap='jet', alpha=0.2)
-    axs[1,2].set_title("Mask + CT image")
-    axs[1,2].axis('off')
-
-    plt.tight_layout()
-    fig.savefig('data/overlay1.png', dpi=300)
-    plt.show()
+    plot_compare_alignment(ct_slice_norm, no_zoom_mask_np, aligned_mask, calc_candidates)
 
 

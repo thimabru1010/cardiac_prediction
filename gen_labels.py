@@ -7,13 +7,13 @@ from scipy.ndimage import zoom, affine_transform
 from skimage.registration import phase_cross_correlation
 from scipy.ndimage import shift  # or use cv2.warpAffine for integer shift
 import os
-from extract_text_from_image import extract_text_from_image
-from remove_text_from_image import remove_text_from_image
+from masks_auto_generation.extract_text_from_image import extract_text_from_image
+from masks_auto_generation.remove_text_from_image import remove_text_from_image
 import google.generativeai as genai # type: ignore
 from PIL import Image
 import re
 from tqdm import tqdm
-from gen_seg_mask import load_dicoms, window_level, artifficial_zoom_crop, tight_crop,\
+from masks_auto_generation.gen_seg_mask import load_dicoms, window_level, artifficial_zoom_crop, tight_crop,\
     align_mask_to_ct, hue_mask
 from utils import create_save_nifti, save_slice_as_dicom
 from openai import OpenAI

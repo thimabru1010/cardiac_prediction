@@ -31,7 +31,9 @@ def get_corner_rectangles(image_shape):
     Formato: (x_min, y_min, x_max, y_max)
     """
     h, w = image_shape[:2]  # height, width
-    m = 0.35  # 35% de cada dimensão
+    m = 0.30  # 35% de cada dimensão
+    mh = 0.30
+    mw = 0.25
     
     rectangles = {
         'top_left': (
@@ -56,8 +58,8 @@ def get_corner_rectangles(image_shape):
         ),
         
         'bottom_right': (
-            int(w * (1-m)), # x_min (65% da largura) 
-            int(h * (1-m)), # y_min (65% da altura)
+            int(w * (1-mw)), # x_min (65% da largura) 
+            int(h * (1-mh)), # y_min (65% da altura)
             w,              # x_max (100% da largura)
             h               # y_max (100% da altura)
         )
@@ -82,11 +84,6 @@ def detect_text(image):
     # zones = [zones['bottom_right']]  # testar só bottom_right
     bboxes = []
     #! No dataset baixado só tem texto no bottom_right
-    # bboxes.append((zones['bottom_left'][0], zones['bottom_left'][1], zones['bottom_left'][2], zones['bottom_left'][3]))
-    # bboxes.append((zones['bottom_right'][0], zones['bottom_right'][1], zones['bottom_right'][2], zones['bottom_right'][3]))
-    # bboxes.append((zones['top_left'][0], zones['top_left'][1], zones['top_left'][2], zones['top_left'][3]))
-    # bboxes.append((zones['top_right'][0], zones['top_right'][1], zones['top_right'][2], zones['top_right'][3]))
-    # print("DEBUG Detecting text in zones...")
     for name, (xmin_ori, ymin_ori, xmax_ori, ymax_ori) in zones.items():
         if name not in ['bottom_right']:
             continue
