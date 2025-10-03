@@ -33,7 +33,9 @@ def hue_mask(hsv_array, hue_range, sat_thresh=30, val_thresh=30):
                                 cv2.inRange(h, lo, 179)) # type: ignore
     mask_s = cv2.inRange(s, sat_thresh, 255)   # type: ignore # suppress grey text
     mask_v = cv2.inRange(v, val_thresh, 255)   # type: ignore # suppress dark bg
-    return cv2.bitwise_and(mask_h, mask_s, mask_v)   # binary 0/255
+    # mask = cv2.bitwise_and(mask_h, mask_s, mask_v)   # binary 0/255
+    mask = cv2.bitwise_and(cv2.bitwise_and(mask_h, mask_s), mask_v)
+    return (mask // 255).astype(np.uint8)  # convert to 0/1
 
 def plot_masks_and_exams_overlay(ct_slice, aligned_mask, calc_candidates):
     fig, axs = plt.subplots(2, 3, figsize=(18, 12))

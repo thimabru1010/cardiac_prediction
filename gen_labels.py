@@ -17,6 +17,7 @@ from masks_auto_generation.gen_seg_mask import load_dicoms, window_level, artiff
     align_mask_to_ct, hue_mask
 from utils import create_save_nifti, save_slice_as_dicom
 from openai import OpenAI
+from PIL import Image
 
 def save_as_nifti(array: np.ndarray, output_path: str, spacing=(1.0, 1.0, 1.0)):
     """
@@ -45,6 +46,7 @@ def save_as_nifti(array: np.ndarray, output_path: str, spacing=(1.0, 1.0, 1.0)):
 if __name__ == "__main__":
     root_path = 'data/ExamesArya'
     root_output = 'data/ExamesArya_NIFTI_CalcSegTraining'
+    root_output2 = 'data/ExamesArya_CalcSegTraining'
     debug_folder = 'data/Debug'
     os.makedirs(debug_folder, exist_ok=True)
     # root_path = 'data/EXAMES/Exames_DICOM'
@@ -159,11 +161,17 @@ if __name__ == "__main__":
             print("Unique values in masks:", np.unique(green_mask), np.unique(blue_mask), np.unique(red_mask), np.unique(pink_mask))
 
             calc_mask = 1 * green_mask + 2 * blue_mask + 3 * red_mask + 4 * pink_mask
-
+            
             slice_positions.append(slice_position)
             calc_masks.append(calc_mask)
             ct_exams.append(ct_slice)
             
+            os.makedirs(os.path.join(root_output, patient), exist_ok=True)
+            os.makedirs(os.path.join(root_output2, patient), exist_ok=True)
+            # Save the cropped and aligned mask slice and ct_slice as numpy arrays
+            np.save(os.path.join(root_output2, patient, f"{patient}_slice{slice_position:03d}_mask.npy"), calc_mask)
+            np.save(os.path.join(root_output2, patient, f"{patient}_slice{slice_position:03d}_ct.npy"), ct_slice)
+
         # Save the mask slice in NIFTI format
         slice_positions = np.array(slice_positions)
         sort_idx = np.argsort(slice_positions)
