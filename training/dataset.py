@@ -3,12 +3,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from typing import Callable, List, Optional, Tuple, Dict, Any
-
-try:
-    import nibabel as nib
-except ImportError as e:
-    raise ImportError("Você precisa instalar nibabel: pip install nibabel") from e
-
+import numpy as np
+import nibabel as nib
 import torch
 from torch.utils.data import Dataset
 
@@ -63,28 +59,25 @@ class CardiacNIFTIDataset(Dataset):
     def _index_files(self):
         patients = os.listdir(self.root)
         for p in patients:
+            slices_filenames = os.listdir(os.path.join(self.root, p))
+            slices_filenames = sorted(slices_filenames)
+            exam_filename = [f for f in slices_filenames if '_ct' in f]
+            label_filename = [f for f in slices_filenames if '_mask' in f]
             # TODO: Para cada paciente, loopar em cima dos slices .npy e carregá-los
-            exam_filename = os.path.join(self.root, p,  p + "_gated_prep.nii.gz")
-            label_filename = os.path.join(self.root, p,  p + f"{self.label_suffix}.nii.gz")
-            self.samples.append((Path(exam_filename), Path(label_filename), p))
+            for ct_filename, mask_filename in zip(exam_filename, label_filename):
+                ct_slice_id = ct_filename.split('_ct.npy')[0]
+                mask_slice_id = mask_filename.split('_mask.npy')[0]
+                if ct_slice_id != mask_slice_id:
+                    print(f"Warning: CT slice ID {ct_slice_id} does not match mask slice ID {mask_slice_id}. Skipping.")
+                    continue
+                self.samples.append((Path(os.path.join(self.root, p, ct_filename)), Path(os.path.join(self.root, p, mask_filename)), ct_slice_id))
 
     def __len__(self) -> int:
         return len(self.samples)
 
-    def _load_nifti(self, path: Path) -> Tuple[torch.Tensor, torch.Tensor]:
-        img = nib.load(str(path))
-        data = img.get_fdata(dtype="float32")  # float32 para PyTorch
-        # Adiciona canal se necessário (C,Z,Y,X) ou (C,H,W)
-        if data.ndim == 3:
-            data_tensor = torch.from_numpy(data).unsqueeze(0)  # (1,D,H,W)
-        elif data.ndim == 4:
-            # Assume última dimensão como canal ou tempo; reorganiza para (C,D,H,W)
-            # Se (X,Y,Z,T) => permutar para (T,Z,Y,X)
-            data_tensor = torch.from_numpy(data).permute(3, 2, 1, 0)
-        else:
-            raise ValueError(f"Dimensionalidade não suportada ({data.ndim}) em {path}")
-        # affine_tensor = torch.from_numpy(img.affine).float()
-        return data_tensor #, affine_tensor
+    def _load_npy(self, path: Path) -> torch.Tensor:
+        array = np.load(path)
+        return torch.from_numpy(array)
 
     def _normalize(self, t: torch.Tensor) -> torch.Tensor:
         if not self.normalize:
@@ -108,24 +101,28 @@ class CardiacNIFTIDataset(Dataset):
 
     def __getitem__(self, idx: int) -> Dict[str, Any]:
         image_path, label_path, sample_id = self.samples[idx]
-        image_tensor = self._load_nifti(image_path)
+        image_tensor = self._load_npy(image_path)
         image_tensor = self._normalize(image_tensor)
 
         label_tensor = None
         if label_path is not None:
-            lt = self._load_nifti(label_path)
+            label_tensor = self._load_npy(label_path)
             # Converte para long (segmentações)
-            label_tensor = lt.squeeze(0).long()  # remove canal se for 1
+            label_tensor = label_tensor.squeeze(0).long()  # remove canal se for 1
+            
+        # print("Image tensor shape before unsqueeze:", image_tensor.shape)
+        # print("Label tensor shape after unsqueeze:", label_tensor.shape )
 
         calc_candidates = torch.zeros_like(image_tensor)
         calc_candidates[image_tensor > 130] = 1
-        image_tensor = torch.cat((image_tensor, calc_candidates), dim=0)
+        image_tensor = torch.stack((image_tensor.to(torch.float32), calc_candidates.to(torch.float32)), dim=0).to(torch.float32)  # add channel dim if missing
         sample = {
             "image": image_tensor,
             "label": label_tensor,
             "id": sample_id,
         }
-
+        # print(image_tensor.dtype, label_tensor.dtype)
+        # print(image_tensor.shape)
         if self.transform:
             sample = self.transform(sample)
         return sample

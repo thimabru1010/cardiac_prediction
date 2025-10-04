@@ -13,7 +13,7 @@ if __name__ == "__main__":
     parser.add_argument("--data_dir", type=str, default="data/ExamesArya_CalcSegTraining", help="Diretório dos dados de entrada.")
     parser.add_argument("--output_dir", type=str, default="data/output", help="Diretório para salvar os resultados.")
     parser.add_argument("--num_epochs", type=int, default=100, help="Número de épocas para o treinamento.")
-    parser.add_argument("--batch_size", type=int, default=32, help="Tamanho do lote para o treinamento.")
+    parser.add_argument("--batch_size", type=int, default=16, help="Tamanho do lote para o treinamento.")
     parser.add_argument("--val_split", type=float, default=0.2, help="Proporção dos dados para validação.")
     args = parser.parse_args()
 
@@ -30,7 +30,7 @@ if __name__ == "__main__":
         label_suffix="_mask",
         normalize=True,
         strict_pairs=True)
-    print(f"Dataset size: {len(dataset)} patients")
+    print(f"Dataset size: {len(dataset)} samples")
     
     # Split train / val
     val_len = int(len(dataset) * args.val_split)
@@ -40,6 +40,8 @@ if __name__ == "__main__":
         [train_len, val_len],
         generator=torch.Generator().manual_seed(42)
     )
+    print(f"Training set size: {len(train_set)} samples")
+    print(f"Validation set size: {len(val_set)} samples")
 
     train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=4, pin_memory=True)
     val_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False, num_workers=4, pin_memory=True)
@@ -50,7 +52,7 @@ if __name__ == "__main__":
     model.load("MTAL_CACS/model/model.pt")
 
     # Initialize optimizer
-    optimizer = optim.Adam(model.parameters(), lr=1e-4)
+    optimizer = optim.Adam(model.mtal.parameters(), lr=1e-4)
 
     # Initialize loss function
     criterion = nn.CrossEntropyLoss()
@@ -89,7 +91,6 @@ if __name__ == "__main__":
     experiment.fit(
         train_loader=train_loader,
         val_loader=val_loader,
-        num_epochs=args.num_epochs,
-        output_dir=args.output_dir,
+        epochs=args.num_epochs,
         log_every=1
     )

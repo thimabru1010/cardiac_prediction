@@ -55,7 +55,7 @@ class BaseExperiment:
         checkpoint_dir: str = "data/checkpoints",
         mixed_precision: bool = False,
     ):
-        self.model = model.to(device)
+        self.model = model.mtal.to(device)
         self.optimizer = optimizer
         self.criterion = criterion
         self.device = torch.device(device)
@@ -237,8 +237,8 @@ class BaseExperiment:
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         # Expect (inputs, targets) or dict with keys
         if isinstance(batch, dict):
-            inputs = batch["inputs"]
-            targets = batch["targets"]
+            inputs = batch["image"]
+            targets = batch["label"]
         else:
             inputs, targets = batch
         return inputs.to(self.device, non_blocking=True), targets.to(
