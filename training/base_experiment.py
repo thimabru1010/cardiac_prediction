@@ -10,6 +10,8 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
+from utils import combine_lesion_region_preds
+
 
 @dataclass
 class EarlyStoppingConfig:
@@ -81,7 +83,7 @@ class BaseExperiment:
             inputs, targets = self._unpack_batch(batch)
             with torch.cuda.amp.autocast(enabled=self.mixed_precision):
                 y_region, y_lesion = self.model(inputs)
-                y_pred = y_region * y_lesion
+                y_pred = combine_lesion_region_preds(y_region, y_lesion, inputs[1])
                 loss = self.criterion(y_pred, targets)
             self.optimizer.zero_grad(set_to_none=True)
             if self.mixed_precision:
@@ -111,7 +113,7 @@ class BaseExperiment:
             for batch in dataloader:
                 inputs, targets = self._unpack_batch(batch)
                 y_region, y_lesion = self.model(inputs)
-                y_pred = y_region * y_lesion
+                y_pred = combine_lesion_region_preds(y_region, y_lesion, inputs[1])
                 loss = self.criterion(y_pred, targets)
                 batch_size = inputs.size(0)
                 total_loss += loss.item() * batch_size

@@ -102,7 +102,7 @@ class CardiacNIFTIDataset(Dataset):
     def __getitem__(self, idx: int) -> Dict[str, Any]:
         image_path, label_path, sample_id = self.samples[idx]
         image_tensor = self._load_npy(image_path)
-        image_tensor = self._normalize(image_tensor)
+        image_tensor_norm = self._normalize(image_tensor)
 
         label_tensor = None
         if label_path is not None:
@@ -115,9 +115,9 @@ class CardiacNIFTIDataset(Dataset):
 
         calc_candidates = torch.zeros_like(image_tensor)
         calc_candidates[image_tensor > 130] = 1
-        image_tensor = torch.stack((image_tensor.to(torch.float32), calc_candidates.to(torch.float32)), dim=0).to(torch.float32)  # add channel dim if missing
+        input_image = torch.stack((image_tensor_norm.to(torch.float32), calc_candidates.to(torch.float32)), dim=0).to(torch.float32)  # add channel dim if missing
         sample = {
-            "image": image_tensor,
+            "image": input_image,
             "label": label_tensor,
             "id": sample_id,
         }
