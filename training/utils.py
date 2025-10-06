@@ -20,6 +20,9 @@ def combine_lesion_region_preds(Y_lesion: torch.Tensor, Y_region: torch.Tensor, 
         
     # Combine lesion predictions
     Y_lesion_bin = Y_lesion.round()
+    print("DEBUG")
+    print(Y_lesion.shape, Xmask.shape)
+    # Filtra predições de lesão pelos candidatos
     Y_lesion_bin[:,1,:,:] = Y_lesion_bin[:,1,:,:]*Xmask
     Y_lesion_bin[:,0,:,:] = 1-Y_lesion_bin[:,1,:,:]
     
