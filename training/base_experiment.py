@@ -83,7 +83,9 @@ class BaseExperiment:
             inputs, targets = self._unpack_batch(batch)
             with torch.cuda.amp.autocast(enabled=self.mixed_precision):
                 y_region, y_lesion = self.model(inputs)
-                y_pred = combine_lesion_region_preds(y_lesion, y_region, inputs[:, 1])
+                y_pred = combine_lesion_region_preds(y_lesion, y_region, inputs[:, 1].unsqueeze(1))
+                print(y_pred.dtype, targets.dtype)
+                print(y_pred.shape, targets.shape)
                 loss = self.criterion(y_pred, targets)
             self.optimizer.zero_grad(set_to_none=True)
             if self.mixed_precision:
@@ -113,7 +115,7 @@ class BaseExperiment:
             for batch in dataloader:
                 inputs, targets = self._unpack_batch(batch)
                 y_region, y_lesion = self.model(inputs)
-                y_pred = combine_lesion_region_preds(y_lesion, y_region, inputs[:, 1])
+                y_pred = combine_lesion_region_preds(y_lesion, y_region, inputs[:, 1].unsqueeze(1))
                 loss = self.criterion(y_pred, targets)
                 batch_size = inputs.size(0)
                 total_loss += loss.item() * batch_size
