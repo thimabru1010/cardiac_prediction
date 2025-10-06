@@ -99,7 +99,7 @@ class BaseExperiment:
             total_loss += loss.item() * batch_size
             for name, fn in self.metrics.items():
                 with torch.no_grad():
-                    metric_sums[name] += fn(y_pred.detach(), targets).item() * batch_size
+                    metric_sums[name] += fn(y_pred.detach(), targets) * batch_size
             count += batch_size
         avg = {"train_loss": total_loss / max(count, 1)}
         for k, v in metric_sums.items():
@@ -120,7 +120,7 @@ class BaseExperiment:
                 batch_size = inputs.size(0)
                 total_loss += loss.item() * batch_size
                 for name, fn in self.metrics.items():
-                    metric_sums[name] += fn(y_pred, targets).item() * batch_size
+                    metric_sums[name] += fn(y_pred, targets) * batch_size
                 count += batch_size
         avg = {"val_loss": total_loss / max(count, 1)}
         for k, v in metric_sums.items():
