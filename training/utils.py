@@ -31,9 +31,14 @@ def combine_lesion_region_preds(Y_lesion: torch.Tensor, Y_region: torch.Tensor, 
     Y_lesion = Y_lesion * Xmask
     
     # Combine region predictions
-    Y_region = torch.max(Y_region, dim=1, keepdim=True).values
+    Y_lesion_multi = Y_region.clone()
+    Y_lesion_multi[:, 0, :, :] = Y_region[:, 0, :, :] * Y_lesion
+    Y_lesion_multi[:, 1, :, :] = Y_region[:, 1, :, :] * Y_lesion
+    Y_lesion_multi[:, 2, :, :] = Y_region[:, 2, :, :] * Y_lesion
+    Y_lesion_multi[:, 3, :, :] = Y_region[:, 3, :, :] * Y_lesion
     
-    Y_lesion_multi = Y_lesion * Y_region
+    
+    # Y_lesion_multi = Y_lesion * Y_region
     
     print("DEBUG 1")
     print(Y_lesion_multi.shape)
