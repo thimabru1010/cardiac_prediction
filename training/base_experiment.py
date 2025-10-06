@@ -10,7 +10,7 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
-from utils import combine_lesion_region_preds
+from training.utils import combine_lesion_region_preds
 
 
 @dataclass
