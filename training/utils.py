@@ -19,6 +19,7 @@ def combine_lesion_region_preds(Y_lesion: torch.Tensor, Y_region: torch.Tensor, 
     # pred_region = np.zeros(image.shape)
         
     # Combine lesion predictions
+    print(Y_lesion.shape)
     Y_lesion_bin = Y_lesion.round()
     print("DEBUG")
     print(Y_lesion[:, 1].shape, Xmask.shape)
