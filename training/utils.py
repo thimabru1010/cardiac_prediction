@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-def combine_lesion_region_preds(Y_lesion: torch.Tensor, Y_region: torch.Tensor, Xmask: torch.Tensor, device) -> torch.Tensor:
+def combine_lesion_region_preds(Y_lesion: torch.Tensor, Y_region: torch.Tensor, Xmask: torch.Tensor) -> torch.Tensor:
     """
     Combina as saídas do decoder de lesão e do decoder de região para produzir a predição final.
     
