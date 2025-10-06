@@ -40,5 +40,6 @@ def combine_lesion_region_preds(Y_lesion: torch.Tensor, Y_region: torch.Tensor, 
     print("DEBUG 2")
     print(Y_lesion_multi.shape)
     # pred_lesion_multi = Y_lesion_multi[:, 0, :, :]
+    print(torch.unique(Y_lesion_multi))
     
     return Y_lesion_multi[:, 0, :, :].to(torch.float32)
