@@ -27,7 +27,7 @@ def combine_lesion_region_preds(Y_lesion: torch.Tensor, Y_region: torch.Tensor, 
     # Filtra predições de lesão pelos candidatos
     # Y_lesion_bin[:,1,:,:] = Y_lesion_bin[:,1,:,:]*Xmask
     # Y_lesion_bin[:,0,:,:] = 1-Y_lesion_bin[:,1,:,:]
-    Y_lesion = torch.max(Y_lesion, dim=1, keepdim=True).values
+    Y_lesion = torch.max(Y_lesion, dim=1, keepdim=True).values[:, 0, :, :]
     print(Y_lesion.shape)
     Y_lesion = Y_lesion * Xmask
     
