@@ -56,7 +56,8 @@ if __name__ == "__main__":
     optimizer = optim.Adam(model.mtal.parameters(), lr=1e-4)
 
     # Initialize loss function
-    criterion = nn.CrossEntropyLoss()
+    # criterion = nn.CrossEntropyLoss()
+    criterion = nn.NLLLoss()  # modelo deve fornecer log-probs, ou faça log(outputs)
     
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3, verbose=True)
     metrics = {
