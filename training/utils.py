@@ -34,6 +34,9 @@ def combine_lesion_region_preds(Y_lesion: torch.Tensor, Y_region: torch.Tensor, 
     Y_region = torch.max(Y_region, dim=1, keepdim=True).values
     
     Y_lesion_multi = Y_lesion * Y_region
+    
+    print("DEBUG 1")
+    print(Y_lesion_multi.shape)
     # Y_region_bin = torch.zeros(Y_region.shape, dtype=torch.float32, device=Y_region.device)
     # Y_region_bin = Y_region_bin.scatter_(1, torch.argmax(Y_region, dim=1, keepdim=True) , 1)
     # Y_region_multi = torch.argmax(Y_region_bin, dim=1, keepdim=True)
