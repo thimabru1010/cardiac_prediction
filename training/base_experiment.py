@@ -86,6 +86,8 @@ class BaseExperiment:
                 y_pred = combine_lesion_region_preds(y_lesion, y_region, inputs[:, 1])
                 print(y_pred.dtype, targets.dtype)
                 print(y_pred.shape, targets.shape)
+                print(torch.unique(targets))
+                1/0
                 loss = self.criterion(y_pred, targets)
             self.optimizer.zero_grad(set_to_none=True)
             if self.mixed_precision:
