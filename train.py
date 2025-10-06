@@ -15,6 +15,7 @@ if __name__ == "__main__":
     parser.add_argument("--num_epochs", type=int, default=100, help="Número de épocas para o treinamento.")
     parser.add_argument("--batch_size", type=int, default=16, help="Tamanho do lote para o treinamento.")
     parser.add_argument("--val_split", type=float, default=0.2, help="Proporção dos dados para validação.")
+    parser.add_argument("--decoder_type", type=str, default="both", choices=["both", "binary", "coronaries"], help="Tipo de decoder a ser utilizado.")
     args = parser.parse_args()
 
     os.makedirs(args.output_dir, exist_ok=True)

@@ -81,7 +81,8 @@ class BaseExperiment:
             inputs, targets = self._unpack_batch(batch)
             with torch.cuda.amp.autocast(enabled=self.mixed_precision):
                 y_region, y_lesion = self.model(inputs)
-                loss = self.criterion(y_lesion, targets)
+                y_pred = y_region * y_lesion
+                loss = self.criterion(y_pred, targets)
             self.optimizer.zero_grad(set_to_none=True)
             if self.mixed_precision:
                 self.scaler.scale(loss).backward()
@@ -94,7 +95,7 @@ class BaseExperiment:
             total_loss += loss.item() * batch_size
             for name, fn in self.metrics.items():
                 with torch.no_grad():
-                    metric_sums[name] += fn(y_lesion.detach(), targets).item() * batch_size
+                    metric_sums[name] += fn(y_pred.detach(), targets).item() * batch_size
             count += batch_size
         avg = {"train_loss": total_loss / max(count, 1)}
         for k, v in metric_sums.items():
@@ -110,11 +111,12 @@ class BaseExperiment:
             for batch in dataloader:
                 inputs, targets = self._unpack_batch(batch)
                 y_region, y_lesion = self.model(inputs)
-                loss = self.criterion(y_lesion, targets)
+                y_pred = y_region * y_lesion
+                loss = self.criterion(y_pred, targets)
                 batch_size = inputs.size(0)
                 total_loss += loss.item() * batch_size
                 for name, fn in self.metrics.items():
-                    metric_sums[name] += fn(y_lesion, targets).item() * batch_size
+                    metric_sums[name] += fn(y_pred, targets).item() * batch_size
                 count += batch_size
         avg = {"val_loss": total_loss / max(count, 1)}
         for k, v in metric_sums.items():
