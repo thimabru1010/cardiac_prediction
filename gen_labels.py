@@ -18,6 +18,8 @@ from masks_auto_generation.gen_seg_mask import load_dicoms, window_level, artiff
 from utils import create_save_nifti, save_slice_as_dicom
 from openai import OpenAI
 from PIL import Image
+import pandas as pd
+import sys
 
 def save_as_nifti(array: np.ndarray, output_path: str, spacing=(1.0, 1.0, 1.0)):
     """
@@ -48,6 +50,11 @@ if __name__ == "__main__":
     root_output = 'data/ExamesArya_NIFTI_CalcSegTraining'
     root_output2 = 'data/ExamesArya_CalcSegTraining'
     debug_folder = 'data/Debug'
+
+    df = pd.read_csv('data/ExamesArya_TextInfo_CalcSegTraining/slices_text_info.csv')
+    print(df.head())
+    print(df.info())
+    df.set_index('patient_id', inplace=True)
     os.makedirs(debug_folder, exist_ok=True)
     # root_path = 'data/EXAMES/Exames_DICOM'
     # output_path = 'data/EXAMES/Exames_Separados/11517/11517'
@@ -90,16 +97,14 @@ if __name__ == "__main__":
             mask_slice = mask_np[i]
             
             # zoom_factor, slice_position = extract_text_from_image(
-            #     model_name='gemini-2.0-flash-thinking-exp-01-21',
+            #     client=client,
+            #     model_name='gpt-4.1',
             #     prompt="Me retorne o que está escrito no canto inferior direito da imagem após a palavra 'Zoom:' e o número após o caracter '#'/ Me retorne um json contendo os seguintes campos: 'zoom' e 'numero'. O campo 'zoom' deve conter o texto após a palavra 'Zoom:' e o campo 'numero' deve conter o número após o caracter '#'.",
-            #     image_pil=mask_slice) # type: ignore
-            
-            zoom_factor, slice_position = extract_text_from_image(
-                client=client,
-                model_name='gpt-4.1',
-                prompt="Me retorne o que está escrito no canto inferior direito da imagem após a palavra 'Zoom:' e o número após o caracter '#'/ Me retorne um json contendo os seguintes campos: 'zoom' e 'numero'. O campo 'zoom' deve conter o texto após a palavra 'Zoom:' e o campo 'numero' deve conter o número após o caracter '#'.",
-                image_npy=mask_slice) # type: ignore
-            
+            #     image_npy=mask_slice) # type: ignore
+            patient_rows = df.loc[int(patient)]
+            zoom_factor = patient_rows[patient_rows.mask_slice_channel == i]['zoom_factor'].values[0]
+            slice_position = patient_rows[patient_rows.mask_slice_channel == i]['slice_position'].values[0]
+            print(type(zoom_factor), type(slice_position))
             print(f"Zoom factor: {zoom_factor} - Slice position: {slice_position}")
             mask_slice, _ = remove_text_from_image(mask_slice)  # Remove text from mask
             
@@ -161,18 +166,26 @@ if __name__ == "__main__":
             pink_mask[(pink_mask == 1) & (red_mask == 1)] = 0  # remove pink where is red
             pink_mask[(pink_mask == 1) & (blue_mask == 1)] = 0  # remove pink where is blue
             pink_mask[(pink_mask == 1) & (green_mask == 1)] = 0  # remove pink where is green
+            # TODO: verificar porque a máscara PINK está com pixels no valor de 130
             print("Unique values in masks:", np.unique(green_mask), np.unique(blue_mask), np.unique(red_mask), np.unique(pink_mask))
 
             calc_mask = 1 * green_mask + 2 * blue_mask + 3 * red_mask + 4 * pink_mask
             
             unique_values = np.unique(calc_mask)
+            print(unique_values)
             original_unique_values = [0, 1, 2, 3, 4]
             for uv in unique_values:
+                print(uv, type(uv))
                 if uv not in original_unique_values:
                     print(f"Warning: unexpected value {uv} in calc_mask for patient {patient}, slice {slice_position}")
-                    break
-            
-            slice_positions.append(slice_position)
+                    sys.exit(1)
+                if uv == 7:
+                    print(f"Warning: value 7 found in calc_mask for patient {patient}, slice {slice_position}. It will be remapped to 3.")
+                    sys.exit(1)
+                if uv > 10:
+                    print(f"Warning: value {uv} greater than 10 found in calc_mask for patient {patient}, slice {slice_position}. This is unexpected.")
+                    sys.exit(1)
+            slice_positions.append(slice_position-1)
             calc_masks.append(calc_mask)
             ct_exams.append(ct_slice)
             
