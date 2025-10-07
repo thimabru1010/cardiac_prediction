@@ -87,7 +87,6 @@ class BaseExperiment:
                 print(y_pred.dtype, targets.dtype)
                 print(y_pred.shape, targets.shape)
                 print(torch.unique(targets))
-                1/0
                 loss = self.criterion(y_pred, targets)
             self.optimizer.zero_grad(set_to_none=True)
             if self.mixed_precision:
