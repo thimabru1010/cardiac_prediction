@@ -158,9 +158,19 @@ if __name__ == "__main__":
             red_mask = cv2.bitwise_or(red_mask1, red_mask2)
             pink_mask = hue_mask(mask_segs, PINK) * calc_candidates
 
+            pink_mask[(pink_mask == 1) & (red_mask == 1)] = 0  # remove pink where is red
+            pink_mask[(pink_mask == 1) & (blue_mask == 1)] = 0  # remove pink where is blue
+            pink_mask[(pink_mask == 1) & (green_mask == 1)] = 0  # remove pink where is green
             print("Unique values in masks:", np.unique(green_mask), np.unique(blue_mask), np.unique(red_mask), np.unique(pink_mask))
 
             calc_mask = 1 * green_mask + 2 * blue_mask + 3 * red_mask + 4 * pink_mask
+            
+            unique_values = np.unique(calc_mask)
+            original_unique_values = [0, 1, 2, 3, 4]
+            for uv in unique_values:
+                if uv not in original_unique_values:
+                    print(f"Warning: unexpected value {uv} in calc_mask for patient {patient}, slice {slice_position}")
+                    break
             
             slice_positions.append(slice_position)
             calc_masks.append(calc_mask)
