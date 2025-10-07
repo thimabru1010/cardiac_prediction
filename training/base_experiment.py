@@ -81,21 +81,17 @@ class BaseExperiment:
         count = 0
         for batch in dataloader:
             inputs, targets = self._unpack_batch(batch)
-            with torch.cuda.amp.autocast(enabled=self.mixed_precision):
-                y_region, y_lesion = self.model(inputs)
-                y_pred = combine_lesion_region_preds(y_lesion, y_region, inputs[:, 1])
-                print(y_pred.dtype, targets.dtype)
-                print(y_pred.shape, targets.shape)
-                print(torch.unique(targets))
-                loss = self.criterion(y_pred, targets)
-            self.optimizer.zero_grad(set_to_none=True)
-            if self.mixed_precision:
-                self.scaler.scale(loss).backward()
-                self.scaler.step(self.optimizer)
-                self.scaler.update()
-            else:
-                loss.backward()
-                self.optimizer.step()
+            self.optimizer.zero_grad()
+            y_region, y_lesion = self.model(inputs)
+            y_pred = combine_lesion_region_preds(y_lesion, y_region, inputs[:, 1])
+            print(y_pred.dtype, targets.dtype)
+            print(y_pred.shape, targets.shape)
+            print(torch.unique(targets))
+            loss = self.criterion(y_pred, targets)
+            # self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+            1/0
             batch_size = inputs.size(0)
             total_loss += loss.item() * batch_size
             for name, fn in self.metrics.items():
