@@ -11,7 +11,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from training.utils import combine_lesion_region_preds
-
+from tqdm import tqdm
 
 @dataclass
 class EarlyStoppingConfig:
@@ -79,14 +79,14 @@ class BaseExperiment:
         total_loss = 0.0
         metric_sums = {k: 0.0 for k in self.metrics}
         count = 0
-        for batch in dataloader:
+        for batch in tqdm(dataloader, desc="Training"):
             inputs, targets = self._unpack_batch(batch)
             self.optimizer.zero_grad()
             y_region, y_lesion = self.model(inputs)
             y_pred = combine_lesion_region_preds(y_lesion, y_region, inputs[:, 1])
-            print(y_pred.dtype, targets.dtype)
-            print(y_pred.shape, targets.shape)
-            print(torch.unique(targets))
+            # print(y_pred.dtype, targets.dtype)
+            # print(y_pred.shape, targets.shape)
+            # print(torch.unique(targets))
             loss = self.criterion(y_pred, targets)
             # self.optimizer.zero_grad()
             loss.backward()
@@ -98,8 +98,9 @@ class BaseExperiment:
                     metric_sums[name] += fn(y_pred.detach(), targets) * batch_size
             count += batch_size
         avg = {"train_loss": total_loss / max(count, 1)}
-        for k, v in metric_sums.items():
-            avg[f"train_{k}"] = v / max(count, 1)
+        for name, v in metric_sums.items():
+            print(name, v.numpy(), count)
+            avg[f"train_{name}"] = v.numpy() / max(count, 1)
         return avg
 
     def validate_epoch(self, dataloader: DataLoader) -> Dict[str, float]:
@@ -108,7 +109,7 @@ class BaseExperiment:
         metric_sums = {k: 0.0 for k in self.metrics}
         count = 0
         with torch.no_grad():
-            for batch in dataloader:
+            for batch in tqdm(dataloader, desc="Validation"):
                 inputs, targets = self._unpack_batch(batch)
                 y_region, y_lesion = self.model(inputs)
                 y_pred = combine_lesion_region_preds(y_lesion, y_region, inputs[:, 1])
@@ -158,12 +159,12 @@ class BaseExperiment:
                 improved = self.early_stopping.step(
                     epoch_stats[self.early_stopping.config.monitor]
                 )
-                self.save_checkpoint(
-                    self.last_checkpoint_path,
-                    epoch=epoch,
-                    best_metric=self.early_stopping.best,
-                    is_best=False,
-                )
+                # self.save_checkpoint(
+                #     self.last_checkpoint_path,
+                #     epoch=epoch,
+                #     best_metric=self.early_stopping.best,
+                #     is_best=False,
+                # )
                 if improved:
                     self.save_checkpoint(
                         self.best_checkpoint_path,

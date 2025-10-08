@@ -131,8 +131,6 @@ class CardiacNIFTIDataset(Dataset):
             # Converte para long (segmentações)
             label_tensor = torch.from_numpy(label_tensor).squeeze(0).long()  # remove canal se for 1
         
-        print("DEBUG DATASET")
-        print(sample_id, torch.unique(label_tensor))
         # print("Image tensor shape before unsqueeze:", image_tensor.shape)
         # print("Label tensor shape after unsqueeze:", label_tensor.shape )
         image_tensor = torch.from_numpy(image_tensor)
