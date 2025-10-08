@@ -29,3 +29,57 @@ def combine_lesion_region_preds(Y_lesion: torch.Tensor, Y_region: torch.Tensor, 
     # Y_lesion_multi[:, 3, :, :] = Y_region[:, 3, :, :] * Y_lesion
     
     return Y_lesion_multi
+
+def accuracy(outputs, labels):
+    pred = outputs.argmax(dim=1)
+    return ((pred == labels).float().mean())
+
+def precision_macro(outputs, labels):
+    pred = outputs.argmax(dim=1)
+    C = outputs.size(1)
+    eps = 1e-6
+    vals = []
+    for k in range(1, C):  # ignora background=0
+        tp = ((pred == k) & (labels == k)).sum().float()
+        fp = ((pred == k) & (labels != k)).sum().float()
+        prec = tp / (tp + fp + eps)
+        vals.append(prec)
+    return torch.stack(vals).mean()
+
+def recall_macro(outputs, labels):
+    pred = outputs.argmax(dim=1)
+    C = outputs.size(1)
+    eps = 1e-6
+    vals = []
+    for k in range(1, C):
+        tp = ((pred == k) & (labels == k)).sum().float()
+        fn = ((pred != k) & (labels == k)).sum().float()
+        rec = tp / (tp + fn + eps)
+        vals.append(rec)
+    return torch.stack(vals).mean()
+
+def f1_macro(outputs, labels):
+    pred = outputs.argmax(dim=1)
+    C = outputs.size(1)
+    eps = 1e-6
+    vals = []
+    for k in range(1, C):
+        tp = ((pred == k) & (labels == k)).sum().float()
+        fp = ((pred == k) & (labels != k)).sum().float()
+        fn = ((pred != k) & (labels == k)).sum().float()
+        prec = tp / (tp + fp + eps)
+        rec  = tp / (tp + fn + eps)
+        f1 = 2 * prec * rec / (prec + rec + eps)
+        vals.append(f1)
+    return torch.stack(vals).mean()
+
+def miou(outputs, labels):
+    pred = outputs.argmax(dim=1)
+    C = outputs.size(1)
+    eps = 1e-6
+    ious = []
+    for k in range(1, C):
+        inter = ((pred == k) & (labels == k)).sum().float()
+        union = ((pred == k) | (labels == k)).sum().float()
+        ious.append(inter / (union + eps))
+    return torch.stack(ious).mean()

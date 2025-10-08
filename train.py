@@ -7,6 +7,7 @@ import argparse
 from training.dataset import CardiacNIFTIDataset
 from torch.utils.data import DataLoader, random_split
 from training.base_experiment import BaseExperiment, EarlyStoppingConfig
+from training.utils import accuracy, precision_macro, recall_macro, f1_macro, miou
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Script de treinamento para o modelo MTAL.")
@@ -62,13 +63,21 @@ if __name__ == "__main__":
     # criterion = nn.NLLLoss()  # modelo deve fornecer log-probs, ou faça log(outputs)
     
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3, verbose=True)
+    # metrics = {
+    #     "accuracy": lambda outputs, labels: (outputs.argmax(dim=1) == labels).float().mean().item(),
+    #     "loss": lambda outputs, labels: criterion(outputs, labels).item(),
+    #     "f1_score": lambda outputs, labels: ((2 * (outputs.argmax(dim=1) * labels).sum()) / ((outputs.argmax(dim=1) + labels).sum() + 1e-6)).item(),
+    #     "precision": lambda outputs, labels: ((outputs.argmax(dim=1) * labels).sum() / (outputs.argmax(dim=1).sum() + 1e-6)).item(),
+    #     "recall": lambda outputs, labels: ((outputs.argmax(dim=1) * labels).sum() / (labels.sum() + 1e-6)).item(),
+    #     "mIoU": lambda outputs, labels: ((outputs.argmax(dim=1) & labels).sum() / (outputs.argmax(dim=1) | labels).sum() + 1e-6).item(),
+    # }
     metrics = {
-        "accuracy": lambda outputs, labels: (outputs.argmax(dim=1) == labels).float().mean().item(),
-        "loss": lambda outputs, labels: criterion(outputs, labels).item(),
-        "f1_score": lambda outputs, labels: ((2 * (outputs.argmax(dim=1) * labels).sum()) / ((outputs.argmax(dim=1) + labels).sum() + 1e-6)).item(),
-        "precision": lambda outputs, labels: ((outputs.argmax(dim=1) * labels).sum() / (outputs.argmax(dim=1).sum() + 1e-6)).item(),
-        "recall": lambda outputs, labels: ((outputs.argmax(dim=1) * labels).sum() / (labels.sum() + 1e-6)).item(),
-        "mIoU": lambda outputs, labels: ((outputs.argmax(dim=1) & labels).sum() / (outputs.argmax(dim=1) | labels).sum() + 1e-6).item(),
+        "accuracy": accuracy,
+        "loss": lambda outputs, labels: criterion(outputs, labels),
+        "precision": precision_macro,
+        "recall": recall_macro,
+        "f1_score": f1_macro,
+        "mIoU": miou,
     }
     
         # Configuração do Early Stopping
