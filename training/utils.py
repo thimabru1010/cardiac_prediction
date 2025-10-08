@@ -17,6 +17,7 @@ def combine_lesion_region_preds(Y_lesion: torch.Tensor, Y_region: torch.Tensor, 
     print(Y_lesion.shape)
     # Y_lesion = torch.max(Y_lesion, dim=1, keepdim=True).values[:, 0, :, :]
     Y_lesion = torch.argmax(Y_lesion, dim=1, keepdim=True)
+    print(Y_lesion.shape, Xmask.shape)
 
     Y_lesion = Y_lesion * Xmask
     print(Y_lesion.shape, Y_region.shape)
