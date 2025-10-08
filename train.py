@@ -10,6 +10,7 @@ from training.base_experiment import BaseExperiment, EarlyStoppingConfig
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Script de treinamento para o modelo MTAL.")
+    parser.add_argument("--exp_name", type=str, default="exp1", help="Nome do experimento.")
     parser.add_argument("--data_dir", type=str, default="data/ExamesArya_CalcSegTraining", help="Diretório dos dados de entrada.")
     parser.add_argument("--output_dir", type=str, default="data/output", help="Diretório para salvar os resultados.")
     parser.add_argument("--num_epochs", type=int, default=100, help="Número de épocas para o treinamento.")
@@ -63,10 +64,10 @@ if __name__ == "__main__":
     metrics = {
         "accuracy": lambda outputs, labels: (outputs.argmax(dim=1) == labels).float().mean().item(),
         "loss": lambda outputs, labels: criterion(outputs, labels).item(),
-        "f1_score": lambda outputs, labels: (2 * (outputs.argmax(dim=1) * labels).sum()) / ((outputs.argmax(dim=1) + labels).sum().item() + 1e-6),
-        "precision": lambda outputs, labels: (outputs.argmax(dim=1) * labels).sum() / (outputs.argmax(dim=1).sum().item() + 1e-6),
-        "recall": lambda outputs, labels: (outputs.argmax(dim=1) * labels).sum() / (labels.sum().item() + 1e-6),
-        "mIoU": lambda outputs, labels: (outputs.argmax(dim=1) & labels).sum() / (outputs.argmax(dim=1) | labels).sum().item(),
+        "f1_score": lambda outputs, labels: ((2 * (outputs.argmax(dim=1) * labels).sum()) / ((outputs.argmax(dim=1) + labels).sum() + 1e-6)).item(),
+        "precision": lambda outputs, labels: ((outputs.argmax(dim=1) * labels).sum() / (outputs.argmax(dim=1).sum() + 1e-6)).item(),
+        "recall": lambda outputs, labels: ((outputs.argmax(dim=1) * labels).sum() / (labels.sum() + 1e-6)).item(),
+        "mIoU": lambda outputs, labels: ((outputs.argmax(dim=1) & labels).sum() / (outputs.argmax(dim=1) | labels).sum() + 1e-6).item(),
     }
     
         # Configuração do Early Stopping
