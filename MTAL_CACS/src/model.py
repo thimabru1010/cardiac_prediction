@@ -147,7 +147,7 @@ class MTALModel():
                 # print(x1.shape)
                 
                 # print(x8d.shape, x7.shape)
-                # Decoder 1
+                # Decoder 1 - 4 coronaries
                 x9 = self.conv_up1(x8d, x7)
                 x10 = self.conv_up2(x9, x6)
                 x11 = self.conv_up3(x10, x5)
@@ -158,7 +158,7 @@ class MTALModel():
                 x16 = self.conv_up8(x15, x01r)
                 xout = self.conv_double_out(x16)
                 
-                # Decoder 2
+                # Decoder 2 - binary lesion
                 x9c = self.conv_up1_class(x8d, torch.cat((x9, x7), dim=1))
                 x10c = self.conv_up2_class(x9c, torch.cat((x10, x6), dim=1))
 

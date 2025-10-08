@@ -16,15 +16,16 @@ def combine_lesion_region_preds(Y_lesion: torch.Tensor, Y_region: torch.Tensor, 
     Y_lesion = torch.softmax(Y_lesion, dim=1)
     print(Y_lesion.shape)
     # Y_lesion = torch.max(Y_lesion, dim=1, keepdim=True).values[:, 0, :, :]
-    Y_lesion = torch.argmax(Y_lesion, dim=1, keepdim=True)
-    print(Y_lesion.shape, Xmask.shape)
+    # Y_lesion = torch.argmax(Y_lesion, dim=1, keepdim=True)
+    # print(Y_lesion.shape, Xmask.shape)
 
-    Y_lesion = Y_lesion * Xmask.unsqueeze(1)
+    Y_lesion = Y_lesion[:, 1, :, :].unsqueeze(1) * Xmask.unsqueeze(1)
     print(Y_lesion.shape, Y_region.shape)
     Y_lesion_multi = Y_region.clone()
-    Y_lesion_multi[:, 0, :, :] = Y_region[:, 0, :, :] * Y_lesion
-    Y_lesion_multi[:, 1, :, :] = Y_region[:, 1, :, :] * Y_lesion
-    Y_lesion_multi[:, 2, :, :] = Y_region[:, 2, :, :] * Y_lesion
-    Y_lesion_multi[:, 3, :, :] = Y_region[:, 3, :, :] * Y_lesion
+    Y_lesion_multi = Y_lesion_multi * Y_lesion
+    # Y_lesion_multi[:, 0, :, :] = Y_region[:, 0, :, :] * Y_lesion
+    # Y_lesion_multi[:, 1, :, :] = Y_region[:, 1, :, :] * Y_lesion
+    # Y_lesion_multi[:, 2, :, :] = Y_region[:, 2, :, :] * Y_lesion
+    # Y_lesion_multi[:, 3, :, :] = Y_region[:, 3, :, :] * Y_lesion
     
     return Y_lesion_multi
