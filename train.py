@@ -17,7 +17,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=32, help="Tamanho do lote para o treinamento.")
     parser.add_argument("--val_split", type=float, default=0.2, help="Proporção dos dados para validação.")
     parser.add_argument("--decoder_type", type=str, default="both", choices=["both", "binary", "coronaries"], help="Tipo de decoder a ser utilizado.")
-    parser.add_argument("--learning_rate", type=float, default=1e-4, help="Taxa de aprendizado para o otimizador.")
+    parser.add_argument("-lr", "--learning_rate", type=float, default=1e-4, help="Taxa de aprendizado para o otimizador.")
     args = parser.parse_args()
 
     os.makedirs(args.output_dir, exist_ok=True)
