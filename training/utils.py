@@ -32,7 +32,7 @@ def combine_lesion_region_preds(Y_lesion: torch.Tensor, Y_region: torch.Tensor, 
 
 def accuracy(outputs, labels):
     pred = outputs.argmax(dim=1)
-    return ((pred == labels).float().mean())
+    return ((pred == labels).float().mean()).item()
 
 def precision_macro(outputs, labels):
     pred = outputs.argmax(dim=1)
@@ -44,7 +44,7 @@ def precision_macro(outputs, labels):
         fp = ((pred == k) & (labels != k)).sum().float()
         prec = tp / (tp + fp + eps)
         vals.append(prec)
-    return torch.stack(vals).mean()
+    return torch.stack(vals).mean().item()
 
 def recall_macro(outputs, labels):
     pred = outputs.argmax(dim=1)
@@ -56,7 +56,7 @@ def recall_macro(outputs, labels):
         fn = ((pred != k) & (labels == k)).sum().float()
         rec = tp / (tp + fn + eps)
         vals.append(rec)
-    return torch.stack(vals).mean()
+    return torch.stack(vals).mean().item()
 
 def f1_macro(outputs, labels):
     pred = outputs.argmax(dim=1)
@@ -71,7 +71,7 @@ def f1_macro(outputs, labels):
         rec  = tp / (tp + fn + eps)
         f1 = 2 * prec * rec / (prec + rec + eps)
         vals.append(f1)
-    return torch.stack(vals).mean()
+    return torch.stack(vals).mean().item()
 
 def miou(outputs, labels):
     pred = outputs.argmax(dim=1)
@@ -82,4 +82,4 @@ def miou(outputs, labels):
         inter = ((pred == k) & (labels == k)).sum().float()
         union = ((pred == k) | (labels == k)).sum().float()
         ious.append(inter / (union + eps))
-    return torch.stack(ious).mean()
+    return torch.stack(ious).mean().item()
