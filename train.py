@@ -63,10 +63,10 @@ if __name__ == "__main__":
     metrics = {
         "accuracy": lambda outputs, labels: (outputs.argmax(dim=1) == labels).float().mean().item(),
         "loss": lambda outputs, labels: criterion(outputs, labels).item(),
-        "f1_score": lambda outputs, labels: (2 * (outputs.argmax(dim=1) * labels).sum()) / ((outputs.argmax(dim=1) + labels).sum() + 1e-6),
-        "precision": lambda outputs, labels: (outputs.argmax(dim=1) * labels).sum() / (outputs.argmax(dim=1).sum() + 1e-6),
-        "recall": lambda outputs, labels: (outputs.argmax(dim=1) * labels).sum() / (labels.sum() + 1e-6),
-        "mIoU": lambda outputs, labels: (outputs.argmax(dim=1) & labels).sum() / (outputs.argmax(dim=1) | labels).sum(),
+        "f1_score": lambda outputs, labels: (2 * (outputs.argmax(dim=1) * labels).sum()) / ((outputs.argmax(dim=1) + labels).sum().item() + 1e-6),
+        "precision": lambda outputs, labels: (outputs.argmax(dim=1) * labels).sum() / (outputs.argmax(dim=1).sum().item() + 1e-6),
+        "recall": lambda outputs, labels: (outputs.argmax(dim=1) * labels).sum() / (labels.sum().item() + 1e-6),
+        "mIoU": lambda outputs, labels: (outputs.argmax(dim=1) & labels).sum() / (outputs.argmax(dim=1) | labels).sum().item(),
     }
     
         # Configuração do Early Stopping
