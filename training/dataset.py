@@ -135,7 +135,7 @@ class CardiacNIFTIDataset(Dataset):
         print(sample_id, torch.unique(label_tensor))
         # print("Image tensor shape before unsqueeze:", image_tensor.shape)
         # print("Label tensor shape after unsqueeze:", label_tensor.shape )
-
+        image_tensor = torch.from_numpy(image_tensor)
         calc_candidates = torch.zeros_like(image_tensor)
         calc_candidates[image_tensor >= 130] = 1
         input_image = torch.stack((image_tensor_norm.to(torch.float32), calc_candidates.to(torch.float32)), dim=0).to(torch.float32)  # add channel dim if missing
@@ -144,7 +144,6 @@ class CardiacNIFTIDataset(Dataset):
             "label": label_tensor,
             "id": sample_id,
         }
-        
         
         # print(image_tensor.dtype, label_tensor.dtype)
         # print(image_tensor.shape)
