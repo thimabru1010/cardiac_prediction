@@ -236,7 +236,7 @@ class BaseExperiment:
 
     def _save_history_json(self):
         hist_path = os.path.join(self.checkpoint_dir, "history.json")
-        print(self.history)
+        # print(self.history)
         with open(hist_path, "w", encoding="utf-8") as f:
             json.dump(self.history, f, indent=2)
 

@@ -42,10 +42,13 @@ def precision_macro(outputs, labels):
     for k in range(1, C):  # ignora background=0
         tp = ((pred == k) & (labels == k)).sum().float()
         fp = ((pred == k) & (labels != k)).sum().float()
-        print(f'Debugging: {k}, TP: {tp}, FP: {fp}')
-        prec = tp / (tp + fp + eps)
-        vals.append(prec)
-    return torch.stack(vals).mean().item()
+        # print(f'Debugging: {k}, TP: {tp}, FP: {fp}')
+        denom = tp + fp
+        prec = tp / (denom + eps)
+        if denom > 0:
+            vals.append(prec)
+    # return torch.stack(vals).mean().item()
+    return (torch.stack(vals).mean().item() if len(vals) else 0.0)
 
 def recall_macro(outputs, labels):
     pred = outputs.argmax(dim=1)
