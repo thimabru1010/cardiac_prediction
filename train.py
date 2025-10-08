@@ -73,7 +73,7 @@ if __name__ == "__main__":
     # }
     metrics = {
         "accuracy": accuracy,
-        "loss": lambda outputs, labels: criterion(outputs, labels),
+        "loss": lambda outputs, labels: criterion(outputs, labels).item(),
         "precision": precision_macro,
         "recall": recall_macro,
         "f1_score": f1_macro,
