@@ -179,7 +179,7 @@ class BaseExperiment:
                     f"train_loss={epoch_stats['train_loss']:.4f} | val_loss={epoch_stats['val_loss']:.4f}\n"
                     f"train_acc={epoch_stats.get('train_accuracy', float('nan')):.4f} | val_acc={epoch_stats.get('val_accuracy', float('nan')):.4f}\n"
                     f"val_f1_score={epoch_stats.get('val_f1_score', float('nan')):.4f} | "
-                    f"val_prec={epoch_stats.get('val_prec', float('nan')):.4f} | "
+                    f"val_prec={epoch_stats.get('val_precision', float('nan')):.4f} | "
                     f"val_recall={epoch_stats.get('val_recall', float('nan')):.4f} | "
                     f"val_mIoU={epoch_stats.get('val_mIoU', float('nan')):.4f}\n"
                 )

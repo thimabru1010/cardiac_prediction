@@ -42,7 +42,7 @@ def precision_macro(outputs, labels):
     for k in range(1, C):  # ignora background=0
         tp = ((pred == k) & (labels == k)).sum().float()
         fp = ((pred == k) & (labels != k)).sum().float()
-        print(f'Debugging: {k}, TP: {tp}, FP: {fp}')
+        # print(f'Debugging: {k}, TP: {tp}, FP: {fp}')
         denom = tp + fp
         if denom > 0:
             prec = tp / (denom + eps)
