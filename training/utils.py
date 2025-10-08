@@ -14,13 +14,13 @@ def combine_lesion_region_preds(Y_lesion: torch.Tensor, Y_region: torch.Tensor, 
         torch.Tensor: Predição final com valores 0 (sem lesão) ou 1..3 (regiões de lesão).
     """
     Y_lesion = torch.softmax(Y_lesion, dim=1)
-    print(Y_lesion.shape)
+    # print(Y_lesion.shape)
     # Y_lesion = torch.max(Y_lesion, dim=1, keepdim=True).values[:, 0, :, :]
     # Y_lesion = torch.argmax(Y_lesion, dim=1, keepdim=True)
     # print(Y_lesion.shape, Xmask.shape)
 
     Y_lesion = Y_lesion[:, 1, :, :].unsqueeze(1) * Xmask.unsqueeze(1)
-    print(Y_lesion.shape, Y_region.shape)
+    # print(Y_lesion.shape, Y_region.shape)
     Y_lesion_multi = Y_region.clone()
     Y_lesion_multi = Y_lesion_multi * Y_lesion
     # Y_lesion_multi[:, 0, :, :] = Y_region[:, 0, :, :] * Y_lesion
