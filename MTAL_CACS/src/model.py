@@ -114,9 +114,10 @@ class MTALModel():
                 self.conv_double_out = nn.Sequential(
                     nn.Conv2d(16, 4,  kernel_size=3, stride=1, padding=1),
                     nn.LeakyReLU(0.2),
-                    nn.Conv2d(4, 4,  kernel_size=3, stride=1, padding=1),
-                    nn.Softmax(dim=1),
+                    nn.Conv2d(4, 4,  kernel_size=3, stride=1, padding=1)
                 )
+                
+                # self.softmax = nn.Softmax(dim=1)
                 
                 self.conv0 = nn.Conv2d(32, 16, kernel_size=3, padding=1, stride=1)
                 self.relu0 = nn.LeakyReLU(0.2)
@@ -146,6 +147,7 @@ class MTALModel():
                 # print(x1.shape)
                 
                 # print(x8d.shape, x7.shape)
+                # Decoder 1
                 x9 = self.conv_up1(x8d, x7)
                 x10 = self.conv_up2(x9, x6)
                 x11 = self.conv_up3(x10, x5)
@@ -155,7 +157,8 @@ class MTALModel():
                 x15 = self.conv_up7(x14, x1)
                 x16 = self.conv_up8(x15, x01r)
                 xout = self.conv_double_out(x16)
-
+                
+                # Decoder 2
                 x9c = self.conv_up1_class(x8d, torch.cat((x9, x7), dim=1))
                 x10c = self.conv_up2_class(x9c, torch.cat((x10, x6), dim=1))
 
@@ -169,9 +172,9 @@ class MTALModel():
                 xoutc1 = self.conv0(x16c)
                 xoutc2 = self.relu0(xoutc1)
                 xoutc3 = self.conv1(xoutc2)
-                xoutc4 = self.soft(xoutc3)
+                # xoutc4 = self.soft(xoutc3)
 
-                return xout, xoutc4
+                return xout, xoutc3
 
         # Create model
         mtal = MTAL()

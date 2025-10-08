@@ -83,16 +83,18 @@ class BaseExperiment:
             inputs, targets = self._unpack_batch(batch)
             self.optimizer.zero_grad()
             y_region, y_lesion = self.model(inputs)
-            y_pred = combine_lesion_region_preds(y_lesion, y_region, inputs[:, 1])
+            y_logits = combine_lesion_region_preds(y_lesion, y_region, inputs[:, 1])
             # print(y_pred.dtype, targets.dtype)
             # print(y_pred.shape, targets.shape)
             # print(torch.unique(targets))
-            loss = self.criterion(y_pred, targets)
+            loss = self.criterion(y_logits, targets)
             # self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
             batch_size = inputs.size(0)
             total_loss += loss.item() * batch_size
+            
+            y_pred = torch.softmax(y_logits, dim=1)
             for name, fn in self.metrics.items():
                 with torch.no_grad():
                     metric_sums[name] += fn(y_pred.detach(), targets) * batch_size
@@ -111,10 +113,11 @@ class BaseExperiment:
             for batch in tqdm(dataloader, desc="Validation"):
                 inputs, targets = self._unpack_batch(batch)
                 y_region, y_lesion = self.model(inputs)
-                y_pred = combine_lesion_region_preds(y_lesion, y_region, inputs[:, 1])
-                loss = self.criterion(y_pred, targets)
+                y_logits = combine_lesion_region_preds(y_lesion, y_region, inputs[:, 1])
+                loss = self.criterion(y_logits, targets)
                 batch_size = inputs.size(0)
                 total_loss += loss.item() * batch_size
+                y_pred = torch.softmax(y_logits, dim=1)
                 for name, fn in self.metrics.items():
                     metric_sums[name] += fn(y_pred, targets) * batch_size
                 count += batch_size

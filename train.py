@@ -14,7 +14,7 @@ if __name__ == "__main__":
     parser.add_argument("--data_dir", type=str, default="data/ExamesArya_CalcSegTraining", help="Diretório dos dados de entrada.")
     parser.add_argument("--output_dir", type=str, default="data/output", help="Diretório para salvar os resultados.")
     parser.add_argument("--num_epochs", type=int, default=100, help="Número de épocas para o treinamento.")
-    parser.add_argument("--batch_size", type=int, default=16, help="Tamanho do lote para o treinamento.")
+    parser.add_argument("--batch_size", type=int, default=32, help="Tamanho do lote para o treinamento.")
     parser.add_argument("--val_split", type=float, default=0.2, help="Proporção dos dados para validação.")
     parser.add_argument("--decoder_type", type=str, default="both", choices=["both", "binary", "coronaries"], help="Tipo de decoder a ser utilizado.")
     args = parser.parse_args()
@@ -57,8 +57,8 @@ if __name__ == "__main__":
     optimizer = optim.Adam(model.mtal.parameters(), lr=1e-4)
 
     # Initialize loss function
-    # criterion = nn.CrossEntropyLoss()
-    criterion = nn.NLLLoss()  # modelo deve fornecer log-probs, ou faça log(outputs)
+    criterion = nn.CrossEntropyLoss()
+    # criterion = nn.NLLLoss()  # modelo deve fornecer log-probs, ou faça log(outputs)
     
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3, verbose=True)
     metrics = {
