@@ -100,7 +100,7 @@ class BaseExperiment:
         avg = {"train_loss": total_loss / max(count, 1)}
         for name, v in metric_sums.items():
             print(name, v, count)
-            avg[f"train_{name}"] = v.numpy() / max(count, 1)
+            avg[f"train_{name}"] = v / max(count, 1)
         return avg
 
     def validate_epoch(self, dataloader: DataLoader) -> Dict[str, float]:
