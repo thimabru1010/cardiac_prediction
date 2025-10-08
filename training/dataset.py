@@ -97,7 +97,7 @@ class CardiacNIFTIDataset(Dataset):
         array = np.load(path)
         return array
 
-    def _normalize(self, t: torch.Tensor) -> torch.Tensor:
+    def _normalize(self, t: np.ndarray) -> np.ndarray:
         if not self.normalize:
             return t
         # Normalize image data
