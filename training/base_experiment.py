@@ -91,7 +91,6 @@ class BaseExperiment:
             # self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
-            1/0
             batch_size = inputs.size(0)
             total_loss += loss.item() * batch_size
             for name, fn in self.metrics.items():

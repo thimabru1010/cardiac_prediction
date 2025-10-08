@@ -58,33 +58,38 @@ def main(args):
             continue
         print('Processing patient: ' + patient)
         # Read image
-        basename = get_cardiac_basename(os.listdir(os.path.join(data_dir, patient, patient)))
+        # basename = get_cardiac_basename(os.listdir(os.path.join(data_dir, patient, patient)))
+        basename = 'test'
         save_filename = 'cardiac'
         if args.partes_moles:
             print('Inferring partes_moles')
             # basename = get_partes_moles_basename(os.listdir(os.path.join(data_dir, patient, patient)))
             # basename = 'partes_moles_FakeGated_mean_slice=3mm.nii.gz'
             # basename = 'partes_moles_FakeGated_avg_slices=4.nii.gz'
-            basename = 'partes_moles_FakeGated_avg_slices=4.nii.gz'
+            # basename = 'partes_moles_FakeGated_avg_slices=4.nii.gz'
             save_filename = basename.split('.')[0]
         print(basename)
         # filename = os.path.splitext(basename)[0]
         # image_nifti = nib.load(os.path.join(data_dir, patient, patient, basename))
-        image_sitk = sitk.ReadImage(os.path.join(data_dir, patient, patient, basename))
+        filename = 'data/EXAMES.old/Exames_NIFTI/176710/176710/2_cardiac_30.nii.gz'
+        image_sitk = sitk.ReadImage(filename)
+        # image_sitk = sitk.ReadImage(os.path.join(data_dir, patient, patient, basename))
         image = sitk.GetArrayFromImage(image_sitk)
         # image = image_nifti.get_fdata()
         # image = np.transpose(image, (2, 1, 0))
-        # print(image.shape)
+        print(image.shape)
 
         # Normalize image data
         Xmin = -2000
         Xmax = 1300
         image[image==-3024]=-2048
         image_norm = (image - Xmin) / (Xmax - Xmin)
-        
+
+        print(image_norm.min(), image_norm.max(), image_norm.mean())
+
         # Lesion candidate mask
         lesion_candidate_mask = np.zeros(image.shape)
-        lesion_candidate_mask[image>130] = 1
+        lesion_candidate_mask[image>=130] = 1
         
         # Init predictions
         pred_lesion = np.zeros(image.shape)
@@ -128,12 +133,13 @@ def main(args):
         # Save predictions
         # filepath = os.path.join(prediction_dir, filename + '_binary_lesion.nrrd')
         prediction_path = os.path.join(prediction_dir, patient, patient)
+        os.makedirs(prediction_path, exist_ok=True)
         filepath = os.path.join(prediction_path, save_filename + '_binary_lesion.nii.gz')
         
         # Save predictions as nifti
         # new_nifti = nib.Nifti1Image(pred_lesion, image_nifti.affine)
         # nib.save(new_nifti, filepath)
-        
+        print(pred_lesion.shape)
         Y_lesion_bin_sitk = sitk.GetImageFromArray(pred_lesion)
         Y_lesion_bin_sitk.CopyInformation(image_sitk)
         sitk.WriteImage(Y_lesion_bin_sitk, filepath, True)
@@ -157,6 +163,12 @@ def main(args):
         Y_lesion_multi_sitk.CopyInformation(image_sitk)
         sitk.WriteImage(Y_lesion_multi_sitk, filepath, True)
         
+        #!Classes
+        # 0 - Background
+        # 1 - LCX
+        # 2 - LAD
+        # 3 - RCA
+        break
     print('--- Finished processing ---')
         
 

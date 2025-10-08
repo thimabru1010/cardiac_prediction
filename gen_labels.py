@@ -143,7 +143,7 @@ if __name__ == "__main__":
             
             calc_candidates = ct_slice.copy()
             calc_candidates[ct_slice < 130] = 0
-            calc_candidates[ct_slice > 130] = 1
+            calc_candidates[ct_slice >= 130] = 1
             
             print(cropped_mask_resized.shape)
             # calc_candidates = np.stack([
@@ -168,7 +168,10 @@ if __name__ == "__main__":
             pink_mask[(pink_mask == 1) & (green_mask == 1)] = 0  # remove pink where is green
             # TODO: verificar porque a máscara PINK está com pixels no valor de 130
             print("Unique values in masks:", np.unique(green_mask), np.unique(blue_mask), np.unique(red_mask), np.unique(pink_mask))
-
+            # 1 --> green (LAD)
+            # 2 --> blue  (LCX)
+            # 3 --> red   (RCA)
+            # 4 --> pink  (Calcifications)
             calc_mask = 1 * green_mask + 2 * blue_mask + 3 * red_mask + 4 * pink_mask
             
             unique_values = np.unique(calc_mask)
