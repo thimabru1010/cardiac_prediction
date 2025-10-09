@@ -44,5 +44,5 @@ if __name__ == "__main__":
     
 
     # Salvar os dados divididos
-    train_data.to_csv(os.path.join(args.data_dir, "train.csv"), index=False)
-    test_data.to_csv(os.path.join(args.data_dir, "test.csv"), index=False)
+    train_data.to_csv(os.path.join("data", "train.csv"), index=False)
+    test_data.to_csv(os.path.join("data", "test.csv"), index=False)
