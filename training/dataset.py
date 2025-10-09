@@ -60,7 +60,7 @@ class CardiacNIFTIDataset(Dataset):
         label_suffix: str = "_mask",
         normalize: bool = True,
         transform: Optional[Callable[[Dict[str, Any]], Dict[str, Any]]] = None,
-        df_train: pd.DataFrame = None,
+        df_sample: pd.DataFrame = None,
         load_affine: bool = False,
         strict_pairs: bool = False,
     ):
@@ -72,16 +72,16 @@ class CardiacNIFTIDataset(Dataset):
         self.transform = transform
         self.load_affine = load_affine
         self.strict_pairs = strict_pairs
-        self.df_train = df_train
+        self.df_sample = df_sample
         self.samples: List[Tuple[Path, Optional[Path], str]] = []
         self._index_files2()
         
     def _index_files2(self):
         # Converte strings para Path (relativas ao root se necessário)
-        self.df_train['ct_path'] = self.df_train['ct_path'].map(lambda p: Path(p))
-        self.df_train['mask_path'] = self.df_train['mask_path'].map(lambda p: Path(p))
-        self.samples = self.df_train[['ct_path', 'mask_path', 'slice_name']].to_numpy().tolist()
-            
+        self.df_sample['ct_path'] = self.df_sample['ct_path'].map(lambda p: Path(p))
+        self.df_sample['mask_path'] = self.df_sample['mask_path'].map(lambda p: Path(p))
+        self.samples = self.df_sample[['ct_path', 'mask_path', 'slice_name']].to_numpy().tolist()
+
     def _index_files(self):
         patients = os.listdir(self.root)
         for p in patients:

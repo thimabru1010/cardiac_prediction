@@ -192,6 +192,13 @@ class MTALModel():
         """
         self.mtal.load_state_dict(torch.load(modelpath))
         
+    def load_checkpoint(self, model_path):
+        """
+        Load model from checkpoint
+        """
+        checkpoint = torch.load(model_path)
+        self.mtal.load_state_dict(checkpoint['model_state'])
+
     def predict(self, Xin):
         self.mtal.eval()
         with torch.no_grad():
