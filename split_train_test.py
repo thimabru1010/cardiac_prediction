@@ -19,6 +19,8 @@ def read_files(data_dir):
                 continue
             filenames["patient_id"].append(os.path.join(p))
             filenames["slice_name"].append(ct_slice_id)
+            filenames["ct_path"].append(os.path.join(data_dir, p, ct_filename))
+            filenames["mask_path"].append(os.path.join(data_dir, p, mask_filename))
     return filenames
 
 if __name__ == "__main__":

@@ -8,6 +8,7 @@ from training.dataset import CardiacNIFTIDataset
 from torch.utils.data import DataLoader, random_split
 from training.base_experiment import BaseExperiment, EarlyStoppingConfig
 from training.utils import accuracy, precision_macro, recall_macro, f1_macro, miou
+import pandas as pd
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Script de treinamento para o modelo MTAL.")
@@ -28,6 +29,7 @@ if __name__ == "__main__":
     print(f"Using device: {device}")
     
     # Load dataset
+    df_train = pd.read_csv(os.path.join("data", "train.csv"))
     dataset = CardiacNIFTIDataset(
         root=args.data_dir,
         label_suffix="_mask",
