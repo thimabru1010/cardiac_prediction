@@ -5,7 +5,7 @@ import os
 
 def read_files(data_dir):
     patients = os.listdir(data_dir)
-    filenames = {"patient_id": [], "slice_name": []}
+    filenames = {"patient_id": [], "slice_name": [], "ct_path": [], "mask_path": []}
     for p in patients:
         slices_filenames = os.listdir(os.path.join(data_dir, p))
         slices_filenames = sorted(slices_filenames)
