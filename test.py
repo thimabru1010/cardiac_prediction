@@ -80,4 +80,8 @@ if __name__ == "__main__":
     print(f"F1 Score: {metrics_avg['f1_macro']:.4f}")
     print(f"mIoU: {metrics_avg['miou']:.4f}")
     
+    # Save metrics in a csv
+    metrics_df = pd.DataFrame([metrics_avg])
+    metrics_df.to_csv(os.path.join(args.exp_name, "test_metrics.csv"), index=False)
+    
     
