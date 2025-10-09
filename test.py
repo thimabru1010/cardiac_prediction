@@ -46,7 +46,8 @@ if __name__ == "__main__":
     model.load_checkpoint(f"{args.exp_name}/weights/best.pt")
 
     # Evaluate model
-    model.mtal.eval()
+    model = model.mtal.to(device)
+    model.eval()
     metrics_sum = {
         'accuracy': 0.0,
         'precision_macro': 0.0,
