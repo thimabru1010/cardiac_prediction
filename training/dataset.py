@@ -74,10 +74,10 @@ class CardiacNIFTIDataset(Dataset):
         self.strict_pairs = strict_pairs
         self.df_train = df_train
         self.samples: List[Tuple[Path, Optional[Path], str]] = []
-        self._index_files()
+        self._index_files2()
         
     def _index_files2(self):
-                # Converte strings para Path (relativas ao root se necessário)
+        # Converte strings para Path (relativas ao root se necessário)
         self.df_train['ct_path'] = self.df_train['ct_path'].map(lambda p: Path(p))
         self.df_train['mask_path'] = self.df_train['mask_path'].map(lambda p: Path(p))
         self.samples = self.df_train[['ct_path', 'mask_path', 'slice_name']].to_numpy().tolist()

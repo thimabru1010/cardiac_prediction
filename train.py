@@ -33,6 +33,7 @@ if __name__ == "__main__":
     dataset = CardiacNIFTIDataset(
         root=args.data_dir,
         label_suffix="_mask",
+        df_train=df_train,
         normalize=True,
         strict_pairs=True)
     print(f"Dataset size: {len(dataset)} samples")
