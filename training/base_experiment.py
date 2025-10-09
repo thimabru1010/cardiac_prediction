@@ -54,8 +54,7 @@ class BaseExperiment:
         scheduler: Optional[Any] = None,
         metrics: Optional[Dict[str, Callable[[torch.Tensor, torch.Tensor], torch.Tensor]]] = None,
         early_stopping: Optional[EarlyStoppingConfig] = None,
-        checkpoint_dir: str = "data/checkpoints",
-        mixed_precision: bool = False,
+        experiment_dir: str = "data/exp1"
     ):
         self.model = model.mtal.to(device)
         self.optimizer = optimizer
@@ -66,13 +65,12 @@ class BaseExperiment:
         self.early_stopping = EarlyStopper(
             early_stopping if early_stopping else EarlyStoppingConfig()
         )
-        self.checkpoint_dir = checkpoint_dir
-        os.makedirs(self.checkpoint_dir, exist_ok=True)
-        self.best_checkpoint_path = os.path.join(self.checkpoint_dir, "best.pt")
-        self.last_checkpoint_path = os.path.join(self.checkpoint_dir, "last.pt")
+        self.experiment_dir = experiment_dir
+        os.makedirs(self.experiment_dir, exist_ok=True)
+        os.makedirs(os.path.join(self.experiment_dir, "weights"), exist_ok=True)
+        self.best_checkpoint_path = os.path.join(self.experiment_dir, "weights", "best.pt")
+        self.last_checkpoint_path = os.path.join(self.experiment_dir, "weights", "last.pt")
         self.history: List[Dict[str, Any]] = []
-        self.mixed_precision = mixed_precision
-        self.scaler = torch.cuda.amp.GradScaler(enabled=mixed_precision)
 
     def train_epoch(self, dataloader: DataLoader) -> Dict[str, float]:
         self.model.train()
@@ -202,7 +200,6 @@ class BaseExperiment:
             "epoch": epoch,
             "model_state": self.model.state_dict(),
             "optimizer_state": self.optimizer.state_dict(),
-            "scaler_state": self.scaler.state_dict() if self.mixed_precision else None,
             "scheduler_state": self.scheduler.state_dict() if self.scheduler else None,
             "best_metric": best_metric,
             "is_best": is_best,
@@ -217,8 +214,6 @@ class BaseExperiment:
         ckpt = torch.load(path, map_location=self.device)
         self.model.load_state_dict(ckpt["model_state"])
         self.optimizer.load_state_dict(ckpt["optimizer_state"])
-        if self.mixed_precision and ckpt.get("scaler_state"):
-            self.scaler.load_state_dict(ckpt["scaler_state"])
         if self.scheduler and ckpt.get("scheduler_state"):
             self.scheduler.load_state_dict(ckpt["scheduler_state"])
         es = ckpt.get("early_stopping", {})
@@ -235,7 +230,7 @@ class BaseExperiment:
         return float("nan")
 
     def _save_history_json(self):
-        hist_path = os.path.join(self.checkpoint_dir, "history.json")
+        hist_path = os.path.join(self.experiment_dir, "history.json")
         # print(self.history)
         with open(hist_path, "w", encoding="utf-8") as f:
             json.dump(self.history, f, indent=2)

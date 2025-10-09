@@ -11,9 +11,8 @@ from training.utils import accuracy, precision_macro, recall_macro, f1_macro, mi
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Script de treinamento para o modelo MTAL.")
-    parser.add_argument("--exp_name", type=str, default="exp1", help="Nome do experimento.")
+    parser.add_argument("--exp_name", type=str, default="data/exp1", help="Nome do experimento.")
     parser.add_argument("--data_dir", type=str, default="data/ExamesArya_CalcSegTraining", help="Diretório dos dados de entrada.")
-    parser.add_argument("--output_dir", type=str, default="data/output", help="Diretório para salvar os resultados.")
     parser.add_argument("--num_epochs", type=int, default=100, help="Número de épocas para o treinamento.")
     parser.add_argument("--batch_size", type=int, default=32, help="Tamanho do lote para o treinamento.")
     parser.add_argument("--val_split", type=float, default=0.2, help="Proporção dos dados para validação.")
@@ -21,9 +20,9 @@ if __name__ == "__main__":
     parser.add_argument("-lr", "--learning_rate", type=float, default=1e-4, help="Taxa de aprendizado para o otimizador.")
     args = parser.parse_args()
 
-    os.makedirs(args.output_dir, exist_ok=True)
-    ckpt_dir = os.path.join(args.output_dir, "checkpoints")
-    os.makedirs(ckpt_dir, exist_ok=True)
+    os.makedirs(args.exp_name, exist_ok=True)
+    # ckpt_dir = os.path.join(args.exp_name, "checkpoints")
+    # os.makedirs(ckpt_dir, exist_ok=True)
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
@@ -60,17 +59,8 @@ if __name__ == "__main__":
 
     # Initialize loss function
     criterion = nn.CrossEntropyLoss()
-    # criterion = nn.NLLLoss()  # modelo deve fornecer log-probs, ou faça log(outputs)
-    
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3, verbose=True)
-    # metrics = {
-    #     "accuracy": lambda outputs, labels: (outputs.argmax(dim=1) == labels).float().mean().item(),
-    #     "loss": lambda outputs, labels: criterion(outputs, labels).item(),
-    #     "f1_score": lambda outputs, labels: ((2 * (outputs.argmax(dim=1) * labels).sum()) / ((outputs.argmax(dim=1) + labels).sum() + 1e-6)).item(),
-    #     "precision": lambda outputs, labels: ((outputs.argmax(dim=1) * labels).sum() / (outputs.argmax(dim=1).sum() + 1e-6)).item(),
-    #     "recall": lambda outputs, labels: ((outputs.argmax(dim=1) * labels).sum() / (labels.sum() + 1e-6)).item(),
-    #     "mIoU": lambda outputs, labels: ((outputs.argmax(dim=1) & labels).sum() / (outputs.argmax(dim=1) | labels).sum() + 1e-6).item(),
-    # }
+
     metrics = {
         "accuracy": accuracy,
         "loss": lambda outputs, labels: criterion(outputs, labels).item(),
@@ -97,7 +87,7 @@ if __name__ == "__main__":
         scheduler=scheduler,
         metrics=metrics,
         early_stopping=early_cfg,
-        checkpoint_dir=ckpt_dir
+        experiment_dir=args.exp_name
     )
 
     # Start training

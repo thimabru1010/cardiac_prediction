@@ -81,7 +81,6 @@ class CardiacNIFTIDataset(Dataset):
             slices_filenames = sorted(slices_filenames)
             exam_filename = [f for f in slices_filenames if '_ct' in f]
             label_filename = [f for f in slices_filenames if '_mask' in f]
-            # TODO: Para cada paciente, loopar em cima dos slices .npy e carregá-los
             for ct_filename, mask_filename in zip(exam_filename, label_filename):
                 ct_slice_id = ct_filename.split('_ct.npy')[0]
                 mask_slice_id = mask_filename.split('_mask.npy')[0]
