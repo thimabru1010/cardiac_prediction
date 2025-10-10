@@ -39,6 +39,7 @@ class EarlyStopper:
             self.num_bad_epochs = 0
             return True  # improved
         self.num_bad_epochs += 1
+        print(f"Early Stopping: {self.num_bad_epochs}/{self.config.patience}")
         if self.num_bad_epochs >= self.config.patience:
             self.should_stop = True
         return False  # not improved
@@ -166,6 +167,7 @@ class BaseExperiment:
                 #     is_best=False,
                 # )
                 if improved:
+                    #TODO: Verificar pq o modelo não está sendo salvo
                     self.save_checkpoint(
                         self.best_checkpoint_path,
                         epoch=epoch,
@@ -209,6 +211,7 @@ class BaseExperiment:
             },
         }
         torch.save(state, path)
+        print("model saved to", path)
 
     def load_checkpoint(self, path: str) -> Dict[str, Any]:
         ckpt = torch.load(path, map_location=self.device)
