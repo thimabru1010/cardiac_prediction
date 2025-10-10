@@ -46,6 +46,7 @@ if __name__ == "__main__":
     model.create()
     model.load_checkpoint(f"{args.exp_name}/weights/best.pt")
     if args.pretrained_model:
+        print("Loading base pretrained model from", args.pretrained_model)
         model.load(args.pretrained_model)
 
     # Evaluate model
