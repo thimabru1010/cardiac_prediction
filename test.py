@@ -19,6 +19,7 @@ if __name__ == "__main__":
     parser.add_argument("--val_split", type=float, default=0.2, help="Proporção dos dados para validação.")
     parser.add_argument("--decoder_type", type=str, default="both", choices=["both", "binary", "coronaries"], help="Tipo de decoder a ser utilizado.")
     parser.add_argument("-lr", "--learning_rate", type=float, default=1e-4, help="Taxa de aprendizado para o otimizador.")
+    parser.add_argument("--pretrained_model", type=str, default="MTAL_CACS/model/model.pt", help="Caminho para o modelo pré-treinado.")
     args = parser.parse_args()
 
     os.makedirs(args.exp_name, exist_ok=True)
@@ -43,8 +44,9 @@ if __name__ == "__main__":
     # Load best model
     model = MTALModel(device=device)
     model.create()
-    # model.load_checkpoint(f"{args.exp_name}/weights/best.pt")
-    model.load("MTAL_CACS/model/model.pt")
+    model.load_checkpoint(f"{args.exp_name}/weights/best.pt")
+    if args.pretrained_model:
+        model.load(args.pretrained_model)
 
     # Evaluate model
     model = model.mtal.to(device)
