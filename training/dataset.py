@@ -133,7 +133,7 @@ class CardiacNIFTIDataset(Dataset):
         if label_path is not None:
             label_tensor = self._load_npy(label_path)
             # TODO: Apply map only to fine tunned model. Keep it for the original model.
-            # label_tensor = map_labels_to_original(label_tensor)
+            label_tensor = map_labels_to_original(label_tensor)
             # exclude Other Calcifications for while (class 4)
             label_tensor[label_tensor == 4] = 0
             # Converte para long (segmentações)
