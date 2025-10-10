@@ -63,6 +63,7 @@ class CardiacNIFTIDataset(Dataset):
         df_sample: pd.DataFrame = None,
         load_affine: bool = False,
         strict_pairs: bool = False,
+        map_labels: bool = True,
     ):
         self.root = Path(root)
         if not self.root.is_dir():
@@ -74,6 +75,7 @@ class CardiacNIFTIDataset(Dataset):
         self.strict_pairs = strict_pairs
         self.df_sample = df_sample
         self.samples: List[Tuple[Path, Optional[Path], str]] = []
+        self.map_labels = map_labels
         self._index_files2()
         
     def _index_files2(self):
@@ -133,7 +135,8 @@ class CardiacNIFTIDataset(Dataset):
         if label_path is not None:
             label_tensor = self._load_npy(label_path)
             # TODO: Apply map only to fine tunned model. Keep it for the original model.
-            label_tensor = map_labels_to_original(label_tensor)
+            if self.map_labels:
+                label_tensor = map_labels_to_original(label_tensor)
             # exclude Other Calcifications for while (class 4)
             label_tensor[label_tensor == 4] = 0
             # Converte para long (segmentações)

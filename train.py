@@ -19,6 +19,7 @@ if __name__ == "__main__":
     parser.add_argument("--val_split", type=float, default=0.2, help="Proporção dos dados para validação.")
     parser.add_argument("--decoder_type", type=str, default="both", choices=["both", "binary", "coronaries"], help="Tipo de decoder a ser utilizado.")
     parser.add_argument("-lr", "--learning_rate", type=float, default=1e-4, help="Taxa de aprendizado para o otimizador.")
+    parser.add_argument("--map_labels", action="store_true", help="Mapeia os labels do dataset para os labels esperados pelo modelo.")
     args = parser.parse_args()
 
     os.makedirs(args.exp_name, exist_ok=True)
@@ -35,7 +36,9 @@ if __name__ == "__main__":
         label_suffix="_mask",
         df_sample=df_train,
         normalize=True,
-        strict_pairs=True)
+        strict_pairs=True,
+        map_labels=args.map_labels
+    )
     print(f"Dataset size: {len(dataset)} samples")
     
     # Split train / val
