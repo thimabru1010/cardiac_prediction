@@ -43,7 +43,8 @@ if __name__ == "__main__":
     # Load best model
     model = MTALModel(device=device)
     model.create()
-    model.load_checkpoint(f"{args.exp_name}/weights/best.pt")
+    # model.load_checkpoint(f"{args.exp_name}/weights/best.pt")
+    model.load_checkpoint(f"MTAL_CACS/model/model.pt")
 
     # Evaluate model
     model = model.mtal.to(device)
