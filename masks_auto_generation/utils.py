@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import cv2
+from scipy import ndimage as ndi
 # from gen_seg_mask import hue_mask
 
 # mask_segs = mask_resized * calc_candidates
@@ -20,6 +21,10 @@ def convert_rgb_to_binary_mask(mask_rgb, calc_candidates):
     red_mask = cv2.bitwise_or(red_mask1, red_mask2)
     pink_mask = hue_mask(mask_hsv, PINK) * calc_candidates[:, :, 0]
 
+    pink_mask[(pink_mask == 1) & (red_mask == 1)] = 0  # remove pink where is red
+    pink_mask[(pink_mask == 1) & (blue_mask == 1)] = 0  # remove pink where is blue
+    pink_mask[(pink_mask == 1) & (green_mask == 1)] = 0  # remove pink where is green
+            
     calc_mask = 1 * green_mask + 2 * blue_mask + 3 * red_mask + 4 * pink_mask
     return calc_mask
     
@@ -128,3 +133,144 @@ def plot_compare_alignment(ct_slice, orig_mask, mask_aligned, calc_candidates):
     plt.tight_layout()
     fig.savefig('data/compare_alignment.png', dpi=300)
     plt.show()
+    
+def plot_lesion_classes(ct_slice, aligned_mask, calc_candidates):
+    ''' Plot each class separately
+    1 - Green - LAD
+    2 - Blue  - CX
+    3 - Red   - RCA
+    4 - Pink  - Contour
+    Always plot the segmentations overlaid with the CT image slice
+    '''
+    
+    fig, axs = plt.subplots(1, 5, figsize=(20, 5))
+    
+    axs[0].imshow(ct_slice, cmap='gray')
+    axs[0].set_title("CT image")
+    axs[0].axis('off')
+    
+    calc_candidates = np.stack([
+        calc_candidates,
+        calc_candidates,
+        calc_candidates
+    ], axis=-1)
+    
+    calc_mask = convert_rgb_to_binary_mask(aligned_mask, calc_candidates)
+    
+    class_names = ['LAD', 'CX', 'RCA', 'Contour']
+    class_colors = ['Greens', 'Blues', 'Reds', 'Purples']
+    for i in range(1, 5):
+        class_mask = (calc_mask == i).astype(np.uint8)
+        axs[i].imshow(ct_slice, cmap='gray')
+        axs[i].imshow(class_mask, cmap=class_colors[i-1], alpha=0.5)
+        axs[i].set_title(f"Class {i}: {class_names[i-1]}")
+        axs[i].axis('off')
+        
+    plt.tight_layout()
+    fig.savefig('data/Debug/lesion_classes.png', dpi=300)
+    plt.show()
+    
+# def filter_noisy_calcifications(mask_3d, min_voxels=3, min_slices=3):
+#     """
+#     mask_3d: binary np.ndarray of shape (Z, Y, X)
+#     Returns: filtered binary mask (same shape) with small/noisy components removed.
+#     """
+#     # Label 3D components with 26-connectivity
+#     struct = ndi.generate_binary_structure(3, 2)  # connectivity = 2 → 26 conn
+#     print(f"Structure shape: {struct.shape}, structure:\n{struct}")
+#     labeled, num = ndi.label(mask_3d, structure=struct)
+#     sizes = ndi.sum(mask_3d, labeled, index=range(1, num+1))  # voxel counts
+    
+#     # Create an output mask
+#     out = np.zeros_like(mask_3d, dtype=bool)
+    
+#     # Loop through components
+#     for comp_id, size in enumerate(sizes, start=1):
+#         if size < min_voxels:
+#             continue
+#         # z-range of this component
+#         coords = np.where(labeled == comp_id)
+#         z_coords = coords[0]
+#         if (z_coords.max() - z_coords.min() + 1) < min_slices:
+#             # component too “thin” in z
+#             continue
+#         # keep
+#         out[labeled == comp_id] = True
+    
+#     return out
+
+# def filter3d_noisy_calcifications(mask_3d, min_voxels=3, min_slices=2):
+#     struct = ndi.generate_binary_structure(3, 2)
+#     labeled, num = ndi.label(mask_3d, structure=struct)
+#     sizes = ndi.sum(mask_3d, labeled, index=np.arange(1, num+1))
+    
+#     keep_mask = np.zeros_like(mask_3d, dtype=bool)
+#     remove_mask = np.zeros_like(mask_3d, dtype=bool)
+    
+#     for comp_id, size in enumerate(sizes, start=1):
+#         z_coords = np.where(labeled == comp_id)[0]
+#         if size < min_voxels or (z_coords.max() - z_coords.min() + 1) < min_slices:
+#             remove_mask[labeled == comp_id] = True
+#         else:
+#             keep_mask[labeled == comp_id] = True
+    
+#     return keep_mask, remove_mask
+
+# def filter2d_noisy_calcifications(mask_3d_bool: np.ndarray, min_pixels: int = 3) -> np.ndarray:
+#     """
+#     Filtra, slice a slice (2D), componentes conectados usando 8-conectividade.
+    
+#     Parâmetros
+#     ----------
+#     mask_3d_bool : np.ndarray (Z, H, W) dtype=bool
+#         Máscara binária 3D (True=voxel positivo).
+#     min_pixels : int
+#         Tamanho mínimo (em pixels) por componente 2D para ser mantido (por slice).
+#         Componentes menores são removidos.
+    
+#     Retorno
+#     -------
+#     out : np.ndarray (Z, H, W) dtype=bool
+#         Máscara binária filtrada, mesmo shape de entrada.
+#     """
+#     assert mask_3d_bool.ndim == 3, f"Esperado volume 3D (Z,H,W); recebido {mask_3d_bool.ndim}D."
+#     Z, H, W = mask_3d_bool.shape
+#     out = np.zeros_like(mask_3d_bool, dtype=bool)
+
+#     struct_2d = ndi.generate_binary_structure(2, 2)  # 8-conectividade (2D)
+
+#     # Checa se o slice está vazio
+#     for z in range(Z):
+#         sl = mask_3d_bool[z].astype(bool)
+#         if not sl.any():
+#             continue
+
+#         labeled, num = ndi.label(sl, structure=struct_2d)
+#         if num == 0:
+#             continue
+
+#         sizes = ndi.sum(sl, labeled, index=np.arange(1, num + 1))
+#         keep = np.zeros_like(sl, dtype=bool)
+
+#         for comp_id, size in enumerate(sizes, start=1):
+#             if size >= min_pixels:
+#                 keep[labeled == comp_id] = True
+
+#         out[z] = keep
+
+#     return out
+
+# def filter_small_lesions(mask_2d, min_pixels=3):
+#     # contours, _ = cv2.findContours(mask_2d.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+#     # polygons = [cnt.squeeze() for cnt in contours if cnt.shape[0] >= 3]  # keep only valid polygons
+#     # return polygons
+#     conected_lesions = np.zeros(mask_2d.shape)
+#     _, lesions = cv2.connectedComponents(mask_2d.astype(np.uint8), connectivity=4)
+#     conected_lesions[lesions == 1] = 1
+    
+#     small_lesions = mask_2d - conected_lesions
+#     print(np.unique(small_lesions, return_counts=True))
+    
+#     return 1 - small_lesions
+    
+

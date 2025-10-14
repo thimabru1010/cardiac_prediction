@@ -7,13 +7,31 @@ from scipy.ndimage import zoom, affine_transform
 from skimage.registration import phase_cross_correlation
 from scipy.ndimage import shift  # or use cv2.warpAffine for integer shift
 import os
-from masks_auto_generation.extract_text_from_image import extract_text_from_image
-from masks_auto_generation.remove_text_from_image import remove_text_from_image
+# from masks_auto_generation.extract_text_from_image import extract_text_from_image
+# from masks_auto_generation.remove_text_from_image import remove_text_from_image
+
+try:
+    from masks_auto_generation.extract_text_from_image import extract_text_from_image
+    print("import via package: masks_auto_generation.extract_text_from_image")
+except ImportError:
+    from extract_text_from_image import extract_text_from_image
+    print("import fallback: extract_text_from_image")
+    
+# from extract_text_from_image import extract_text_from_image
+
+try:
+    from masks_auto_generation.remove_text_from_image import remove_text_from_image
+    print("import via package: masks_auto_generation.remove_text_from_image")
+except ImportError:
+    from remove_text_from_image import remove_text_from_image
+    print("import fallback: remove_text_from_image")
+
 import google.generativeai as genai # type: ignore
 from PIL import Image
 from openai import OpenAI
 import re
-from masks_auto_generation.utils import plot_masks_and_exams_overlay, hue_mask, plot_compare_alignment
+from masks_auto_generation.utils import plot_masks_and_exams_overlay, hue_mask, plot_compare_alignment, plot_lesion_classes, convert_rgb_to_binary_mask
+# from utils import plot_masks_and_exams_overlay, hue_mask, plot_compare_alignment, plot_lesion_classes, convert_rgb_to_binary_mask
 
 # --- Configuração da API Key ---
 # RECOMENDADO: Use uma variável de ambiente chamada GOOGLE_API_KEY
@@ -220,7 +238,7 @@ def load_dicoms(dicom_folder):
 
 if __name__ == "__main__":
     # dicom_folder = 'data/EXAMES/Patients_AutomatedMask/311180'
-    dicom_folder = 'data/ExamesArya/281715'
+    dicom_folder = 'data/ExamesArya/123484'
     ct_img, mask_img = load_dicoms(dicom_folder)
 
     mask_np = sitk.GetArrayFromImage(mask_img)[-1]  # (z, y, x) or (z, y, x, c)
@@ -297,6 +315,7 @@ if __name__ == "__main__":
     cv2.imwrite('data/Debug/mask_resized_filtered.png', mask_resized)
     
     aligned_mask = align_mask_to_ct(mask_resized, ct_slice, return_warp=True)
+    # aligned_mask = cv2.morphologyEx(aligned_mask, cv2.MORPH_OPEN, morphEx_kernel)
 
     cv2.imwrite('data/Debug/aligned_mask.png', aligned_mask)
     print(aligned_mask.shape, aligned_mask.min(), aligned_mask.max())
@@ -309,8 +328,18 @@ if __name__ == "__main__":
     ct_slice_norm = ct_slice.copy()
     ct_slice_norm = (ct_slice_norm - ct_slice_norm.min()) / (ct_slice_norm.max() - ct_slice_norm.min())
 
+    calc_candidates2 = np.stack([
+    calc_candidates,
+    calc_candidates,
+    calc_candidates
+    ], axis=-1)
+    aligned_mask_classes = convert_rgb_to_binary_mask(aligned_mask, calc_candidates2)
+    print(np.unique(aligned_mask_classes))
+    
     plot_masks_and_exams_overlay(ct_slice_norm, aligned_mask, calc_candidates)
     
     plot_compare_alignment(ct_slice_norm, no_zoom_mask_np, aligned_mask, calc_candidates)
+    
+    plot_lesion_classes(ct_slice_norm, aligned_mask, calc_candidates)
 
 

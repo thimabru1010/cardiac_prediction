@@ -115,16 +115,15 @@ class CardiacNIFTIDataset(Dataset):
         t[t==-3024]=-2048
         t = (t - Xmin) / (Xmax - Xmin)
         return t
-        
-    # def _normalize(self, t: torch.Tensor) -> torch.Tensor:
-    #     if not self.normalize:
-    #         return t
-    #     # Normalização por volume (ignora zeros)
-    #     mean = t.mean()
-    #     std = t.std()
-    #     if std > 0:
-    #         t = (t - mean) / std
-    #     return t
+    
+    def _unnormalize(self, t: np.ndarray) -> np.ndarray:
+        if not self.normalize:
+            return t
+        # Unnormalize image data
+        Xmin = -2000
+        Xmax = 1300
+        t = t * (Xmax - Xmin) + Xmin
+        return t
 
     def __getitem__(self, idx: int) -> Dict[str, Any]:
         image_path, label_path, sample_id = self.samples[idx]

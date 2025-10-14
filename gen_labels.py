@@ -15,6 +15,7 @@ import re
 from tqdm import tqdm
 from masks_auto_generation.gen_seg_mask import load_dicoms, window_level, artifficial_zoom_crop, tight_crop,\
     align_mask_to_ct, hue_mask
+from masks_auto_generation.utils import filter_small_lesions
 from utils import create_save_nifti, save_slice_as_dicom
 from openai import OpenAI
 from PIL import Image
@@ -50,6 +51,8 @@ if __name__ == "__main__":
     root_output = 'data/ExamesArya_NIFTI_CalcSegTraining'
     root_output2 = 'data/ExamesArya_CalcSegTraining'
     debug_folder = 'data/Debug'
+    
+    os.makedirs(root_output, exist_ok=True)
 
     df = pd.read_csv('data/ExamesArya_TextInfo_CalcSegTraining/slices_text_info.csv')
     print(df.head())
@@ -82,6 +85,7 @@ if __name__ == "__main__":
     client = OpenAI()
     # Load IA.dcm images and generates mask labels from it
     for patient in tqdm(patients):
+        patient = '313073'  #! For debugging only
         print("\n\nPreprocessing patient:", patient)
         # load dicom images
         patient_path = os.path.join(root_path, patient)
@@ -90,11 +94,20 @@ if __name__ == "__main__":
         ct_np = sitk.GetArrayFromImage(ct_img)
         print("Mask image shape:", mask_np.shape)
         print("CT image shape:", ct_np.shape)
+        
+        calc_candidates2 = ct_np.copy()
+        calc_candidates2[ct_np < 130] = 0
+        calc_candidates2[ct_np >= 130] = 1
+        # Removing small calcifications
+        # small_calc_keep_mask, _ = filter3d_noisy_calcifications(calc_candidates2, min_voxels=3, min_slices=2)
+        # small_calc_keep_mask = filter2d_noisy_calcifications(calc_candidates2, min_pixels=3)
         slice_positions = []
         calc_masks = []
         ct_exams = []
         for i in range(mask_np.shape[0]):
             mask_slice = mask_np[i]
+            # mask_small_calc_keep = small_calc_keep_mask[i]
+            print(f"\nProcessing slice {i+1}/{mask_np.shape[0]} - Patient: {patient}")
             
             # zoom_factor, slice_position = extract_text_from_image(
             #     client=client,
@@ -166,8 +179,7 @@ if __name__ == "__main__":
             pink_mask[(pink_mask == 1) & (red_mask == 1)] = 0  # remove pink where is red
             pink_mask[(pink_mask == 1) & (blue_mask == 1)] = 0  # remove pink where is blue
             pink_mask[(pink_mask == 1) & (green_mask == 1)] = 0  # remove pink where is green
-            # TODO: verificar porque a máscara PINK está com pixels no valor de 130
-            print("Unique values in masks:", np.unique(green_mask), np.unique(blue_mask), np.unique(red_mask), np.unique(pink_mask))
+            
             # 1 --> green (LAD)
             # 2 --> blue  (LCX)
             # 3 --> red   (RCA)
@@ -208,5 +220,6 @@ if __name__ == "__main__":
         save_as_nifti(calc_masks, os.path.join(root_output, patient, f"{patient}_mask.nii.gz"), spacing=ct_img.GetSpacing())
         save_as_nifti(ct_exams, os.path.join(root_output, patient, f"{patient}_gated_prep.nii.gz"), spacing=ct_img.GetSpacing())
         print("Saved patient:", patient)
+        break
 
     print('Finished')

@@ -18,9 +18,10 @@ import nibabel as nib
 import argparse
 
 def get_cardiac_basename(files):
-    exclude_files = ['multi_label', 'multi_lesion', 'binary_lesion']
+    exclude_files = ['multi_label', 'multi_lesion', 'binary_lesion', '_sg']
     files = [file for file in files if not any(f in file for f in exclude_files)]
-    gated_exam_basename = [file for file in files if 'cardiac' in file]
+    # gated_exam_basename = [file for file in files if 'cardiac' in file]
+    gated_exam_basename = [file for file in files if '_g' in file]
     return gated_exam_basename[0]
 
 def get_partes_moles_basename(files):
@@ -52,15 +53,17 @@ def main(args):
     # Load image files from data folder    
     # files = glob(data_dir + '/*.nii.gz')
     patients = os.listdir(data_dir)
-    exclusion_patients = ['179238', '176064', '177222']
+    exclusion_patients = []
     for patient in patients:
         if patient in exclusion_patients:
             continue
         print('Processing patient: ' + patient)
         # Read image
         # basename = get_cardiac_basename(os.listdir(os.path.join(data_dir, patient, patient)))
-        basename = 'test'
-        save_filename = 'cardiac'
+        basename = get_cardiac_basename(os.listdir(os.path.join(data_dir, patient)))
+        # basename = 'test'
+        # save_filename = 'cardiac'
+        save_filename = 'gated'
         if args.partes_moles:
             print('Inferring partes_moles')
             # basename = get_partes_moles_basename(os.listdir(os.path.join(data_dir, patient, patient)))
@@ -70,8 +73,12 @@ def main(args):
             save_filename = basename.split('.')[0]
         print(basename)
         # filename = os.path.splitext(basename)[0]
+        filename = os.path.join(data_dir, patient, basename)
+        # filename = 'data/Exames_NIFTI/74657/74657/2_cardiac_30.nii.gz'
+        # filename = os.path.join(data_dir, patient, patient, basename)
+        print(filename)
         # image_nifti = nib.load(os.path.join(data_dir, patient, patient, basename))
-        filename = 'data/EXAMES.old/Exames_NIFTI/176710/176710/2_cardiac_30.nii.gz'
+        # filename = 'data/EXAMES.old/Exames_NIFTI/176710/176710/2_cardiac_30.nii.gz'
         image_sitk = sitk.ReadImage(filename)
         # image_sitk = sitk.ReadImage(os.path.join(data_dir, patient, patient, basename))
         image = sitk.GetArrayFromImage(image_sitk)
@@ -79,6 +86,8 @@ def main(args):
         # image = np.transpose(image, (2, 1, 0))
         print(image.shape)
 
+        # Verify image values
+        print(np.min(image), np.max(image), np.mean(image))
         # Normalize image data
         Xmin = -2000
         Xmax = 1300
@@ -107,7 +116,15 @@ def main(args):
             
             # Predict CT slice
             Y_region, Y_lesion = model.predict(Xin)
-                
+            
+            Y_region = torch.softmax(Y_region, dim=1)
+            Y_lesion = torch.softmax(Y_lesion, dim=1)
+            
+            print(Y_region.shape, Y_lesion.shape)
+            pred_region2 = torch.argmax(Y_region, dim=1, keepdim=True)
+            pred_lesion2 = torch.argmax(Y_lesion, dim=1, keepdim=True)
+            print(torch.unique(pred_region2), torch.unique(pred_lesion2))
+
             # Combine lesion predictions
             Y_lesion_bin = Y_lesion.round()
             Y_lesion_bin[:,1,:,:] = Y_lesion_bin[:,1,:,:]*Xmask
@@ -126,13 +143,14 @@ def main(args):
             pred_region[s,:,:] = Y_region_multi[0,0,:,:].cpu()
             pred_lesion_multi[s,:,:] = Y_lesion_multi[0,:,:,:].cpu()
             
+            # print(Y_lesion_bin[0,1,:,:].shape, Y_region_multi[0,0,:,:].shape, Y_lesion_multi[0,:,:,:].shape)
             # print(pred_lesion_multi[s,:,:])
             # print(np.unique(pred_lesion_multi[s,:,:]))
-            
         # print('Saveing predictions from: ' + os.path.basename(file))
         # Save predictions
         # filepath = os.path.join(prediction_dir, filename + '_binary_lesion.nrrd')
-        prediction_path = os.path.join(prediction_dir, patient, patient)
+        # prediction_path = os.path.join(prediction_dir, patient, patient)
+        prediction_path = os.path.join(prediction_dir, patient)
         os.makedirs(prediction_path, exist_ok=True)
         filepath = os.path.join(prediction_path, save_filename + '_binary_lesion.nii.gz')
         
@@ -162,6 +180,8 @@ def main(args):
         Y_lesion_multi_sitk = sitk.GetImageFromArray(pred_lesion_multi)
         Y_lesion_multi_sitk.CopyInformation(image_sitk)
         sitk.WriteImage(Y_lesion_multi_sitk, filepath, True)
+        
+        # pixels_detected = np.unique
         
         #!Classes
         # 0 - Background
