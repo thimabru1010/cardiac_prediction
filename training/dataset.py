@@ -56,7 +56,7 @@ class CardiacNIFTIDataset(Dataset):
     """
     def __init__(
         self,
-        root: str | Path = "data/ExamesArya_CalcSegTraining",
+        root: str | Path = "data/ExamesArya_CalcSegTraining2",
         label_suffix: str = "_mask",
         normalize: bool = True,
         transform: Optional[Callable[[Dict[str, Any]], Dict[str, Any]]] = None,
@@ -127,6 +127,7 @@ class CardiacNIFTIDataset(Dataset):
 
     def __getitem__(self, idx: int) -> Dict[str, Any]:
         image_path, label_path, sample_id = self.samples[idx]
+        print(image_path, label_path, sample_id)
         image_tensor = self._load_npy(image_path)
         image_tensor_norm = self._normalize(image_tensor)
 

@@ -79,6 +79,7 @@ if __name__ == "__main__":
             metrics_sum['miou'] += miou(y_pred, labels) * batch_size
             
             count += batch_size
+            
     metrics_avg = {k: v / count for k, v in metrics_sum.items()}
     print("Test set metrics:")
     print(f"Accuracy: {metrics_avg['accuracy']:.4f}")

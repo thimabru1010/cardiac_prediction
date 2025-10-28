@@ -231,8 +231,8 @@ def load_dicoms(dicom_folder):
     reader = sitk.ImageSeriesReader()
     reader.SetFileNames(gated_files)
     ct_img = reader.Execute()
-    print("CT image shape:", ct_img.GetSize())
-    print("Mask image shape:", mask_img.GetSize())
+    # print("CT image shape:", ct_img.GetSize())
+    # print("Mask image shape:", mask_img.GetSize())
     return ct_img, mask_img
 
 

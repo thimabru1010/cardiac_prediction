@@ -25,7 +25,7 @@ def read_files(data_dir):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Script para dividir dataset em treino e teste.")
-    parser.add_argument("--data_dir", type=str, default="data/ExamesArya_CalcSegTraining", help="Diretório dos dados de entrada.")
+    parser.add_argument("--data_dir", type=str, default="data/ExamesArya_CalcSegTraining2", help="Diretório dos dados de entrada.")
     parser.add_argument("--seed", type=int, default=42, help="Semente para reprodução da divisão.")
     args = parser.parse_args()
 

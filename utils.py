@@ -2,9 +2,49 @@ import numpy as np
 import nibabel as nib
 import os
 import datetime
+import pydicom
 from pydicom.dataset import Dataset, FileDataset
 from pydicom.uid import generate_uid
+import SimpleITK as sitk
+from typing import List, Dict, Any
+import re
 
+# def load_nifti_image(file_path: str) -> np.ndarray:
+#     """Carrega uma imagem NIfTI e retorna o array numpy."""
+#     nifti_img = nib.load(file_path)
+#     return nifti_img.get_fdata()
+
+def load_nifti_sitk(file_path: str, return_numpy: bool = True):
+    """
+    Carrega uma imagem NIfTI usando SimpleITK e opcionalmente a converte para numpy array.
+    
+    Parameters:
+    -----------
+    file_path : str
+        Caminho para o arquivo NIfTI (.nii ou .nii.gz)
+    return_numpy : bool, optional (default=True)
+        Se True, também retorna o array numpy além do objeto SimpleITK.Image
+        
+    Returns:
+    --------
+    sitk_image : SimpleITK.Image
+        Objeto de imagem do SimpleITK
+    np_array : numpy.ndarray, optional
+        Array numpy com os dados (retornado apenas se return_numpy=True)
+        Formato do array: (Z, Y, X)
+    """
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Arquivo não encontrado: {file_path}")
+    
+    sitk_image = sitk.ReadImage(file_path)
+    
+    if return_numpy:
+        # GetArrayFromImage retorna em ordem (Z,Y,X)
+        np_array = sitk.GetArrayFromImage(sitk_image)
+        return sitk_image, np_array.transpose(1, 2, 0)  # Transpose para (X,Y,Z)
+    else:
+        return sitk_image
+    
 def get_basename(files, exclude_files, keywords):
     # Exclude files based on the exclude_files list
     files = [file for file in files if not any(f in file for f in exclude_files)]
@@ -147,3 +187,60 @@ def save_slice_as_dicom(
     output_path = os.path.join(output_folder, filename)
     ds.save_as(output_path)
     print(f"Saved DICOM: {output_path}")
+
+# def _sort_dicom_files(file_list: List[str]) -> List[str]:
+#     """Ordena por ImagePositionPatient (Z) ou InstanceNumber."""
+#     def key(p):
+#         ds = pydicom.dcmread(p, stop_before_pixels=True, force=True)
+#         ipp = getattr(ds, "ImagePositionPatient", None)
+#         if ipp is not None and len(ipp) == 3:
+#             return float(ipp[2])
+#         inum = getattr(ds, "InstanceNumber", None)
+#         return int(inum) if inum is not None else os.path.basename(p)
+#     return sorted(file_list, key=key)
+
+def _sort_dicom_files(file_list: List[str]) -> List[str]:
+    """Ordena os arquivos pelo número no nome (última sequência de dígitos)."""
+    def num_key(p: str) -> int:
+        m = re.search(r'(\d+)(?=\D*$)', os.path.basename(p))
+        return int(m.group(1)) if m else 10**12  # sem número vai para o fim
+    return sorted(file_list, key=num_key)
+
+def load_dicom_volume_from_list(file_list: List[str]) -> Dict[str, Any]:
+    """
+    Carrega uma série DICOM já listada (mesma série) e retorna o volume 3D.
+    Retorna: img (SimpleITK Image), arr (np.ndarray [Z,Y,X]), spacing (X,Y,Z),
+             origin, direction, meta, files (ordenados).
+    """
+    if not file_list:
+        raise ValueError("Lista de DICOMs vazia.")
+    files_sorted = _sort_dicom_files(file_list)
+
+    # (opcional) validar se pertencem à mesma série
+    first = pydicom.dcmread(files_sorted[0], stop_before_pixels=True, force=True)
+    uid = getattr(first, "SeriesInstanceUID", None)
+    for p in files_sorted[1:]:
+        ds = pydicom.dcmread(p, stop_before_pixels=True, force=True)
+        if uid and getattr(ds, "SeriesInstanceUID", None) != uid:
+            raise ValueError("Arquivos pertencem a séries diferentes.")
+
+    reader = sitk.ImageSeriesReader()
+    reader.MetaDataDictionaryArrayUpdateOn()
+    reader.LoadPrivateTagsOn()
+    reader.SetFileNames(files_sorted)
+    img3d = reader.Execute()
+
+    return {
+        "img": img3d,
+        "arr": sitk.GetArrayFromImage(img3d),   # (Z,Y,X)
+        "files": files_sorted,
+        "spacing": img3d.GetSpacing(),          # (X,Y,Z)
+        "origin": img3d.GetOrigin(),
+        "direction": img3d.GetDirection(),
+        "meta": {
+            "SeriesDescription": getattr(first, "SeriesDescription", ""),
+            "ProtocolName": getattr(first, "ProtocolName", ""),
+            "SeriesNumber": getattr(first, "SeriesNumber", ""),
+            "SeriesInstanceUID": uid,
+        },
+    }

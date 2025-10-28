@@ -11,6 +11,7 @@ import dicom2nifti
 import pydicom
 import SimpleITK as sitk
 from typing import List, Dict, Any
+from utils import create_save_nifti
 
 def load_dicom_volume_from_list(file_list: List[str]) -> Dict[str, Any]:
     """
@@ -64,7 +65,7 @@ def _sort_dicom_files(file_list: List[str]) -> List[str]:
 
 if __name__ == '__main__':
     root_path = 'data/ExamesArya'
-    root_output = 'data/ExamesArya_NIFTI'
+    root_output = 'data/ExamesArya_NIFTI2'
     # root_path = 'data/EXAMES/Exames_DICOM'
     # output_path = 'data/EXAMES/Exames_Separados/11517/11517'
     
@@ -92,13 +93,12 @@ if __name__ == '__main__':
         print(gated_vol["arr"].shape, gated_vol["spacing"])
         gated_np = gated_vol["arr"]
         print(np.min(gated_np), np.max(gated_np), np.mean(gated_np))
-
-        try:
-            dicom2nifti.convert_directory(patient_path, root_output)
-        except Exception as e:
-                print(f'Error in {patient}')
-                patients_error.append(patient)
-                print(e)
+        label_vol = load_dicom_volume_from_list([os.path.join(patient_path, f) for f in label_files])
+        non_gated_vol = load_dicom_volume_from_list([os.path.join(patient_path, f) for f in non_gated_files])
+        print("Saving NIFTI files...")
+        sitk.WriteImage(gated_vol["img"], os.path.join(output_path, f"{patient}_gated.nii.gz"))
+        sitk.WriteImage(label_vol["img"], os.path.join(output_path, f"{patient}_mask.nii.gz"))
+        sitk.WriteImage(non_gated_vol["img"], os.path.join(output_path, f"{patient}_non_gated.nii.gz"))
     print('finished')
     
     print('Errors found in patients:')

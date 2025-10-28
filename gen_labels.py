@@ -15,7 +15,7 @@ import re
 from tqdm import tqdm
 from masks_auto_generation.gen_seg_mask import load_dicoms, window_level, artifficial_zoom_crop, tight_crop,\
     align_mask_to_ct, hue_mask
-from masks_auto_generation.utils import filter_small_lesions
+# from masks_auto_generation.utils import filter_small_lesions
 from utils import create_save_nifti, save_slice_as_dicom
 from openai import OpenAI
 from PIL import Image
@@ -48,13 +48,14 @@ def save_as_nifti(array: np.ndarray, output_path: str, spacing=(1.0, 1.0, 1.0)):
     
 if __name__ == "__main__":
     root_path = 'data/ExamesArya'
-    root_output = 'data/ExamesArya_NIFTI_CalcSegTraining'
-    root_output2 = 'data/ExamesArya_CalcSegTraining'
+    root_output = 'data/ExamesArya_NIFTI_CalcSegTraining2'
+    root_output2 = 'data/ExamesArya_CalcSegTraining2'
     debug_folder = 'data/Debug'
     
     os.makedirs(root_output, exist_ok=True)
+    os.makedirs(root_output2, exist_ok=True)
 
-    df = pd.read_csv('data/ExamesArya_TextInfo_CalcSegTraining/slices_text_info.csv')
+    df = pd.read_csv('data/ExamesArya_TextInfo/slices_text_info.csv')
     print(df.head())
     print(df.info())
     df.set_index('patient_id', inplace=True)
@@ -85,7 +86,7 @@ if __name__ == "__main__":
     client = OpenAI()
     # Load IA.dcm images and generates mask labels from it
     for patient in tqdm(patients):
-        patient = '313073'  #! For debugging only
+        # patient = '313073'  #! For debugging only
         print("\n\nPreprocessing patient:", patient)
         # load dicom images
         patient_path = os.path.join(root_path, patient)
@@ -220,6 +221,5 @@ if __name__ == "__main__":
         save_as_nifti(calc_masks, os.path.join(root_output, patient, f"{patient}_mask.nii.gz"), spacing=ct_img.GetSpacing())
         save_as_nifti(ct_exams, os.path.join(root_output, patient, f"{patient}_gated_prep.nii.gz"), spacing=ct_img.GetSpacing())
         print("Saved patient:", patient)
-        break
 
     print('Finished')

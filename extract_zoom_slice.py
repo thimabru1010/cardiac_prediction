@@ -22,7 +22,7 @@ import pandas as pd
     
 if __name__ == "__main__":
     root_path = 'data/ExamesArya'
-    root_output = 'data/ExamesArya_TextInfo_CalcSegTraining'
+    root_output = 'data/ExamesArya_TextInfo'
     debug_folder = 'data/Debug'
     os.makedirs(debug_folder, exist_ok=True)
     os.makedirs(root_output, exist_ok=True)
@@ -50,6 +50,10 @@ if __name__ == "__main__":
     patients = [p for p in patients if p not in patients_processed]
     print(f"Patients already processed: {len(patients_processed)}")
     print(f"Patients to process: {len(patients)}")
+    
+    if len(patients_processed) > 0:
+        # Load csv with already processed slices
+        df_existing = pd.read_csv(os.path.join(root_output, 'slices_text_info.csv'))
     
     client = OpenAI()
     
@@ -128,5 +132,11 @@ if __name__ == "__main__":
         'zoom_factor': total_zoom_values,
         'ct_number_channels': total_number_channels
     })
+    
+    if len(patients_processed) > 0:
+        print(f"Adding new {df.shape[0]} slices info to existing {df_existing.shape[0]} slices info.")
+        # Concatenate existing dataframe with new data
+        df = pd.concat([df_existing, df], ignore_index=True)
+        print(f"Total slices info after concatenation: {df.shape[0]}")
     
     df.to_csv(os.path.join(root_output, 'slices_text_info.csv'), index=False)
