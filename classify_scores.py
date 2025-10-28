@@ -351,6 +351,7 @@ if __name__ == '__main__':
         
         print(f'Lesion - Sensitivity: {lesion_sensitivity}')
         print(f'Lesion - Specificity: {lesion_specificity}')
+        print('test')
         # print(f'Heart Mask - Sensitivity: {heart_sensitivity}')
         # print(f'Heart Mask - Specificity: {heart_specificity}')
         # print(f'Coronaries ROI - Sensitivity: {roi_sensitivity}')
