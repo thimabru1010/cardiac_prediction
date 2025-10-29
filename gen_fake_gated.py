@@ -9,6 +9,7 @@ import pandas as pd
 from utils import get_basename, create_save_nifti
 from scipy.ndimage import binary_fill_holes
 from scipy.ndimage import zoom
+import argparse
 
 def circumscribing_rectangle(center, radius):
     x_center, y_center = center
@@ -43,7 +44,13 @@ def upsample_mask(mask, new_shape):
     return mask2
 
 if __name__ == '__main__':
-    root_path = 'data/EXAMES/Exames_NIFTI'
+    parser = argparse.ArgumentParser(description='Generate Fake Gated Images')
+    parser.add_argument('--root_path', type=str, default='data/EXAMES/Exames_NIFTI', help='Root path to the NIfTI files')
+    parser.add_argument('--output_path', type=str, default='data/EXAMES/Exames_NIFTI', help='Output path for the generated images')
+    args = parser.parse_args()
+
+    root_path = args.root_path
+    output_path = args.output_path
     patients = os.listdir(root_path)
     
     exam_type = 'partes_moles'
@@ -57,12 +64,12 @@ if __name__ == '__main__':
     for patient in tqdm(patients):
         print(patient)
             
-        output_path = f'data/EXAMES/Exames_NIFTI/{patient}/{patient}'
+        patient_output_path = os.path.join(output_path, patient)
         patient_path = os.path.join(root_path, patient, patient)
-        heart_segs_data = nib.load(f'data/EXAMES/Exames_NIFTI/{patient}/{patient}/partes_moles_HeartSegs.nii.gz')
-        bones_segs_data = nib.load(f'data/EXAMES/Exames_NIFTI/{patient}/{patient}/partes_moles_BonesSegs.nii.gz')
-        heart_circle_segs_data = nib.load(f'data/EXAMES/Exames_NIFTI/{patient}/{patient}/partes_moles_HeartSegs_dilat_k=10.nii.gz')
-        
+        heart_segs_data = nib.load(os.path.join(patient_path, 'partes_moles_HeartSegs.nii.gz'))
+        bones_segs_data = nib.load(os.path.join(patient_path, 'partes_moles_BonesSegs.nii.gz'))
+        heart_circle_segs_data = nib.load(os.path.join(patient_path, 'partes_moles_HeartSegs_dilat_k=10.nii.gz'))
+
         heart_mask = heart_segs_data.get_fdata()
         bones_mask = bones_segs_data.get_fdata()
         heart_circle_mask = heart_circle_segs_data.get_fdata()

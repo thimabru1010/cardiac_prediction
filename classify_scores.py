@@ -209,7 +209,7 @@ if __name__ == '__main__':
     argparser.add_argument('--avg4', action='store_true', help='Whether to use partes_moles exams averaged by 4 slices (3.2mm)')
     argparser.add_argument('--threshold', '-th', type=str, default=130, help='Calcification Threshold in HU')
     # argparser.add_argument('--save_path', type=str, help='Path to save the results')
-    argparser.add_argument('--clssf_mode', '-clssf', type=int, default=2, help='Calcification Threshold in HU')
+    argparser.add_argument('--clssf_mode', '-clssf', type=int, default=3, help='Classification Mode')
     # argparser.add_argument('--scores0', action='store_true', help='Whether to also use scores0 for classification')
     argparser.add_argument('--scores0_path', type=str, default=None, help='CSV filepath with the calcium scores0')
     args = argparser.parse_args()
@@ -268,7 +268,7 @@ if __name__ == '__main__':
         df['Lesion'] = df['Lesion'].astype(float)
         print(df['Escore'].values)
         # print(df.head(100))
-        print("DEBUG")
+        # print("DEBUG")
         # print(df.columns)
         
         # Change column names
@@ -302,7 +302,7 @@ if __name__ == '__main__':
         metrics.append([run_name, acc_lesion_gated, f1_score_lesion_gated, avg_error])
         
         # Define class names
-        class_names = ['No Risk', 'Risk 1', 'Risk 2']
+        class_names = ['=0', '>=1 <300', '>=300']
 
         # Create base directories for confusion matrices
         cm_base_path = os.path.join(exp_root_path, 'Confusion_Matrices')
