@@ -28,7 +28,7 @@ def main():
     out = str(Path(args.output))
 
     print(f"Baixando: {url}")
-    gdown.download(url=url, output=out, quiet=False, fuzzy=True, continue_=args.resume)
+    gdown.download(url=url, output=out, quiet=False, fuzzy=True, resume=args.resume)
 
 if __name__ == "__main__":
     main()
