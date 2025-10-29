@@ -8,6 +8,7 @@ import json
 import random
 import argparse
 import threading
+import re
 from pathlib import Path
 from typing import Optional, List, Tuple, Dict
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -79,6 +80,39 @@ def ensure_token(creds: Credentials) -> str:
 # =========================
 # Utilidades de Drive
 # =========================
+def extract_drive_id(input_str: str) -> str:
+    """
+    Extrai o ID do Google Drive a partir de um link compartilhável ou retorna o próprio ID.
+    
+    Formatos suportados:
+    - https://drive.google.com/drive/folders/ID
+    - https://drive.google.com/drive/folders/ID?usp=sharing
+    - https://drive.google.com/file/d/ID/view
+    - https://drive.google.com/file/d/ID/view?usp=sharing
+    - https://drive.google.com/open?id=ID
+    - ID direto
+    """
+    input_str = input_str.strip()
+    
+    # Padrões de regex para diferentes formatos de link
+    patterns = [
+        r'/folders/([a-zA-Z0-9_-]+)',  # pasta
+        r'/file/d/([a-zA-Z0-9_-]+)',    # arquivo
+        r'[?&]id=([a-zA-Z0-9_-]+)',     # open?id=
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, input_str)
+        if match:
+            return match.group(1)
+    
+    # Se não encontrou padrão, assume que já é um ID
+    # Valida se tem formato básico de ID do Drive (letras, números, _ e -)
+    if re.match(r'^[a-zA-Z0-9_-]+$', input_str):
+        return input_str
+    
+    raise ValueError(f"Não foi possível extrair ID do Drive de: {input_str}")
+
 def resolve_shortcut(service, fobj: dict) -> dict:
     if fobj.get("mimeType") == SHORTCUT_MIME and "shortcutDetails" in fobj:
         tid = fobj["shortcutDetails"]["targetId"]
@@ -285,14 +319,22 @@ def process_task(service, creds: Credentials, row: Tuple[str, str, str, Optional
 # =========================
 def main():
     ap = argparse.ArgumentParser(description="Baixar pasta compartilhada do Google Drive (paralelo + resume + log)")
-    ap.add_argument("folder_id", help="ID da pasta no Google Drive")
+    ap.add_argument("folder_input", help="ID ou link compartilhável da pasta/arquivo no Google Drive")
     ap.add_argument("-o", "--output", default=".", help="Diretório base para salvar")
     ap.add_argument("-w", "--workers", type=int, default=MAX_WORKERS, help="Número de downloads em paralelo")
     args = ap.parse_args()
 
+    # Extrai o ID do link ou usa o ID direto
+    try:
+        folder_id = extract_drive_id(args.folder_input)
+        log_print(f"ID extraído: {folder_id}")
+    except ValueError as e:
+        log_print(f"ERRO: {e}")
+        sys.exit(1)
+
     service, creds = get_drive_service()
     meta = service.files().get(
-        fileId=args.folder_id,
+        fileId=folder_id,
         fields="id,name,mimeType",
         supportsAllDrives=True
     ).execute()
@@ -304,7 +346,7 @@ def main():
     root_out = Path(args.output).expanduser().resolve() / meta["name"]
     log_print(f"Baixando pasta '{meta['name']}' para '{root_out}' …")
 
-    tasks = collect_tasks(service, args.folder_id, root_out)
+    tasks = collect_tasks(service, folder_id, root_out)
     log_print(f"Total de arquivos: {len(tasks)}")
 
     log_rows: List[dict] = []
