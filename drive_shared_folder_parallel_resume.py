@@ -356,18 +356,27 @@ def main():
     service, creds = get_drive_service()
     meta = service.files().get(
         fileId=folder_id,
-        fields="id,name,mimeType",
+        fields="id,name,mimeType,size",
         supportsAllDrives=True
     ).execute()
 
-    if meta["mimeType"] != FOLDER_MIME:
-        log_print("ERRO: O ID informado não é de uma pasta.")
-        sys.exit(1)
+    root_out = Path(args.output).expanduser().resolve()
+    
+    # Verifica se é pasta ou arquivo único
+    if meta["mimeType"] == FOLDER_MIME:
+        # É uma pasta - comportamento original
+        root_out = root_out / meta["name"]
+        log_print(f"Baixando pasta '{meta['name']}' para '{root_out}' …")
+        tasks = collect_tasks(service, folder_id, root_out)
+    else:
+        # É um arquivo único
+        log_print(f"Baixando arquivo '{meta['name']}' para '{root_out}' …")
+        file_id = meta["id"]
+        name = meta["name"]
+        mime = meta["mimeType"]
+        size = int(meta["size"]) if "size" in meta else None
+        tasks = [(file_id, name, mime, size, root_out)]
 
-    root_out = Path(args.output).expanduser().resolve() / meta["name"]
-    log_print(f"Baixando pasta '{meta['name']}' para '{root_out}' …")
-
-    tasks = collect_tasks(service, folder_id, root_out)
     log_print(f"Total de arquivos: {len(tasks)}")
 
     log_rows: List[dict] = []
