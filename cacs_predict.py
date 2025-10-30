@@ -130,6 +130,9 @@ def main(args):
         Y_lesion_multi_sitk.CopyInformation(image_sitk)
         sitk.WriteImage(Y_lesion_multi_sitk, filepath, True)
         
+        print(f"Saved predictions to: {prediction_path} - {save_filename}")
+        
+        
         print("Predictions saved for patient: " + patient)
         
         #!Classes
