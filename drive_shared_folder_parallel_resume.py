@@ -67,7 +67,28 @@ def get_drive_service() -> any: #type: ignore
                 log_print("ERRO: coloque credentials.json (OAuth) na pasta do script.")
                 sys.exit(1)
             flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
-            creds = flow.run_local_server(port=0)
+            
+            # Modificação para servidor remoto (SSH)
+            # Em vez de run_local_server, usa run_console para autenticação manual
+            flow.redirect_uri = 'urn:ietf:wg:oauth:2.0:oob'
+            
+            auth_url, _ = flow.authorization_url(prompt='consent')
+            
+            log_print("\n" + "="*70)
+            log_print("AUTENTICAÇÃO NECESSÁRIA")
+            log_print("="*70)
+            log_print("\n1. Abra este link no seu navegador LOCAL:\n")
+            log_print(f"   {auth_url}\n")
+            log_print("2. Faça login e autorize o aplicativo")
+            log_print("3. Copie o código de autorização que aparecerá")
+            log_print("4. Cole o código abaixo:\n")
+            log_print("="*70 + "\n")
+            
+            code = input("Cole o código de autorização aqui: ").strip()
+            
+            flow.fetch_token(code=code)
+            creds = flow.credentials
+            
         with open("token.json", "w") as f:
             f.write(creds.to_json())
     return build("drive", "v3", credentials=creds), creds
