@@ -69,20 +69,20 @@ def process_patient(args_tuple):
         dilation_kernel = np.ones((3,3), np.uint8)
         heart_dilation_kernel = np.ones((10,10), np.uint8)
         
-        # def dilate_3d(arr, kernel, iters):
-        #     out = np.zeros_like(arr)
-        #     for z in range(arr.shape[2]):
-        #         out[:,:,z] = cv2.dilate(arr[:,:,z].astype(np.uint8), kernel, iterations=iters)
-        #     return out
+        def dilate_3d(arr, kernel, iters):
+            out = np.zeros_like(arr)
+            for z in range(arr.shape[2]):
+                out[:,:,z] = cv2.dilate(arr[:,:,z].astype(np.uint8), kernel, iterations=iters)
+            return out
         
-        heart_array = cv2.dilate(heart_array, dilation_kernel, 5)
-        ribs_array = cv2.dilate(ribs_array, dilation_kernel, 3)
-        vertebra_array = cv2.dilate(vertebra_array, dilation_kernel, 2)
-        esternum_array = cv2.dilate(esternum_array, dilation_kernel, 2)
+        heart_array = dilate_3d(heart_array, dilation_kernel, 5)
+        ribs_array = dilate_3d(ribs_array, dilation_kernel, 3)
+        vertebra_array = dilate_3d(vertebra_array, dilation_kernel, 2)
+        esternum_array = dilate_3d(esternum_array, dilation_kernel, 2)
 
         bones_array = ribs_array + vertebra_array + esternum_array
-        heart_big_array = cv2.dilate(heart_array, heart_dilation_kernel, 3)
-        
+        heart_big_array = dilate_3d(heart_array, heart_dilation_kernel, 3)
+
         # Save outputs
         patient_output_path = os.path.join(output_path, patient)
         os.makedirs(patient_output_path, exist_ok=True)
@@ -170,7 +170,19 @@ if __name__ == '__main__':
     print("="*60)
     # --- FIM DA MODIFICAÇÃO ---
     
-    exclude_files = ['_HeartSegs', '_FakeGated', '_FakeGated_CircleMask', 'multi_label', 'multi_lesion', 'binary_lesion', '_mask']
+    # exclude_files = ['_HeartSegs', '_FakeGated', '_FakeGated_CircleMask', 'multi_label', 'multi_lesion', 'binary_lesion', '_mask']
+    exclude_files = ['_HeartSegs',
+                     '_BonesSegs',
+                     '_FakeGated',
+                     '_FakeGated_CircleMask',
+                     'multi_label',
+                     'multi_lesion',
+                     'binary_lesion',
+                     '_mask',
+                     'CalciumCandidates',
+                     'IncreasedLesion',
+                     'LesionsSingleLesions',
+                     'SingleLesions']
     keywords = ['non_gated']
 
     # Preparar argumentos para cada paciente

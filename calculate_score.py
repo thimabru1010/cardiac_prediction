@@ -250,7 +250,7 @@ if __name__ == '__main__':
         print('Gated Agaston Score Calculation')
         exclude_files = ['multi_label', 'multi_lesion', 'binary_lesion', '_CalciumCandidates',\
             '_CircleSingleLesions', '_ROISingleLesions', '_circle_lesions', '_IncreasedLesion',\
-                '_clustered=', '_LesionSingleLesions', '_circle', 'non_gated', '_mask']
+                '_clustered=', '_LesionSingleLesions', 'SingleLesions', '_circle', 'non_gated', '_mask']
         keywords_cardiac = ['gated']
         for patient in tqdm(patients):
             print(patient)
@@ -289,7 +289,7 @@ if __name__ == '__main__':
                 pixel_spacing=pixel_spacing,
                 patient_id=patient)
 
-            create_save_nifti(connected_les, gated_exam_img.affine, f'{root_path}/{patient}/gated_LesionSingleLesions_mask.nii.gz')
+            create_save_nifti(connected_les, gated_exam_img.affine, f'{root_path}/{patient}/gated_SingleLesions_mask.nii.gz')
 
             if les_clssf_data.shape[0] != 0:
                 train_les_data.append(les_clssf_data)
