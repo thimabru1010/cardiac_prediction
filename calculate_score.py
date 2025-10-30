@@ -32,10 +32,6 @@ def save_classifier_data(train_data, df_score_ref, save_path, method='lesion', d
     df_classifier_data['patient'] = df_classifier_data['patient'].astype(int)
     
     df_classifier_data = pd.merge(df_classifier_data, df_score_ref[['patient', 'Escore']], on='patient', how='left')
-    # if method == 'circle':
-    #     df_classifier_data.to_csv(os.path.join(folder_path, f'classifier_dataset_radius={args.circle_radius}.csv'), index=False)
-    # elif method == 'roi':
-    #     df_classifier_data.to_csv(os.path.join(folder_path, 'classifier_dataset_roi.csv'), index=False)
     if method == 'lesion':
         if scores0:
             print(os.path.join(folder_path, f'classifier_dataset_lesion_{dilate}.csv'))
@@ -128,16 +124,15 @@ def calculate_score(exam, mask, bones_mask=None, calc_candidates_mask=None, pixe
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description='Calculate Agaston Score')
-    argparser.add_argument('--root_path', type=str, default='data/EXAMES/ExamesArya_NIFTI2', help='Root path of the exams')
+    argparser.add_argument('--root_path', type=str, default='data/ExamesArya_NIFTI2', help='Root path of the exams')
     argparser.add_argument('--csv_path', type=str, default='data/cac_score_data.csv', help='Path to the CSV file with reference scores')
     argparser.add_argument('--dilate', action='store_true', help='Wheter to dilate the mask or not')
     argparser.add_argument('--dilate_kernel', type=int, default=5, help='Wheter to dilate the mask or not')
     argparser.add_argument('--dilate_it', type=int, default=5, help='Wheter to dilate the mask or not')
-    argparser.add_argument('--circle_radius', type=int, default=120, help='Radius for the Circle Mask')
-    argparser.add_argument('--partes_moles', action='store_true', help='Whether to infer partes_moles exams')
-    argparser.add_argument('--avg', type=int, default=0, help='Number of slices to average')
+    argparser.add_argument('--fake_gated', action='store_true', help='Whether to infer fake gated exams')
+    argparser.add_argument('--avg', type=int, default=4, help='Number of slices to average')
     argparser.add_argument('--cac_th', type=int, default=130, help='Calcification Threshold in HU')
-    argparser.add_argument('--scores0', action='store_true', help='Whether to include patients with score 0')
+    argparser.add_argument('--scores0', action='store_true', help='Use only if you are processing scores 0 exams')
     args = argparser.parse_args()
     
     root_path = args.root_path
@@ -165,21 +160,19 @@ if __name__ == '__main__':
     avg_str = ''
     avg_flag = False if args.avg == 0 else True
     # exclusion_patients = ['179238', '176064', '177222']
-    if args.partes_moles:
+    if args.fake_gated:
         exam_folder = 'Fake_Gated'
         cac_th = args.cac_th
-        exclude_files = ['partes_moles_HeartSegs', 'partes_moles_FakeGated', 'partes_moles_FakeGated_CircleMask']
-        keywords_partes_moles = ['partes_moles_body', 'mediastino']
         if avg_flag:
             if args.avg == 4:
-                partes_moles_basename = 'partes_moles_FakeGated_avg_slices=4'
-                partes_moles_heart_filename = 'partes_moles_HeartSegs_FakeGated_avg_slices=4.nii.gz'
-                partes_moles_bones_filename = 'partes_moles_BonesSegs_FakeGated_avg_slices=4.nii.gz'
+                partes_moles_basename = 'non_gated_FakeGated_avg_slices=4'
+                partes_moles_heart_filename = 'non_gated_HeartSegs_FakeGated_avg_slices=4.nii.gz'
+                partes_moles_bones_filename = 'non_gated_BonesSegs_FakeGated_avg_slices=4.nii.gz'
                 avg_str = 'avg=4'
         else:
-            partes_moles_basename = 'partes_moles_FakeGated'
-            partes_moles_heart_filename = 'partes_moles_HeartSegs_FakeGated.nii.gz'
-            partes_moles_bones_filename = 'partes_moles_BonesSegs_FakeGated.nii.gz'
+            partes_moles_basename = 'non_gated_FakeGated'
+            partes_moles_heart_filename = 'non_gated_HeartSegs_FakeGated.nii.gz'
+            partes_moles_bones_filename = 'non_gated_BonesSegs_FakeGated.nii.gz'
             avg_str = 'All Slices'
         
         for patient in tqdm(patients):
@@ -227,24 +220,25 @@ if __name__ == '__main__':
             les_score_fg, connected_les, les_clssf_data = calculate_score(fg_exam, fg_mask_les, fg_heart_mask, fg_bones_mask, calc_candidates_mask,\
                 pixel_spacing, patient_id=patient, th=cac_th)
             
-            roi_coronaries_score_fg, _, _ = calculate_score(fg_exam, roi_coronaries_mask, fg_heart_mask, fg_bones_mask, calc_candidates_mask,\
-                pixel_spacing, patient_id=patient, th=cac_th)
+            # roi_coronaries_score_fg, _, _ = calculate_score(fg_exam, roi_coronaries_mask, fg_heart_mask, fg_bones_mask, calc_candidates_mask,\
+            #     pixel_spacing, patient_id=patient, th=cac_th)
             
-            heart_score_fg, _, _ = calculate_score(fg_exam, fg_heart_mask, fg_heart_mask, fg_bones_mask, calc_candidates_mask,\
-                pixel_spacing, patient_id=patient, th=cac_th)
+            # heart_score_fg, _, _ = calculate_score(fg_exam, fg_heart_mask, fg_heart_mask, fg_bones_mask, calc_candidates_mask,\
+            #     pixel_spacing, patient_id=patient, th=cac_th)
             
             if les_clssf_data.shape[0] != 0:
                 train_les_data.append(les_clssf_data)
             
             # print('ROI Score FG:', roi_score_fg)
             print('Lesion Score FG:', les_score_fg)
-            print(f'ROI Coronaries Score FG: {roi_coronaries_score_fg}')
+            # print(f'ROI Coronaries Score FG: {roi_coronaries_score_fg}')
             print(f'Reference Score: {df_score_ref[df_score_ref["patient"] == int(patient)]["Escore"].values[0]}')
             
-            results.append([patient, les_score_fg, roi_coronaries_score_fg, heart_score_fg])
+            # results.append([patient, les_score_fg, roi_coronaries_score_fg, heart_score_fg])
+            results.append([patient, les_score_fg])
             
     #! Gated
-    if not args.partes_moles:
+    if not args.fake_gated:
         exam_folder = 'Gated'
         cac_th = args.cac_th
         print('Gated Agaston Score Calculation')
