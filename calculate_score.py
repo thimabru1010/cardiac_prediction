@@ -160,25 +160,24 @@ if __name__ == '__main__':
     avg_str = ''
     avg_flag = False if args.avg == 0 else True
     # exclusion_patients = ['179238', '176064', '177222']
-    try:
-        if args.fake_gated:
-            exam_folder = 'Fake_Gated'
-            cac_th = args.cac_th
-            if avg_flag:
-                if args.avg == 4:
-                    partes_moles_basename = 'non_gated_FakeGated_avg_slices=4'
-                    partes_moles_heart_filename = 'non_gated_HeartSegs_FakeGated_avg_slices=4.nii.gz'
-                    partes_moles_bones_filename = 'non_gated_BonesSegs_FakeGated_avg_slices=4.nii.gz'
-                    avg_str = 'avg=4'
-            else:
-                partes_moles_basename = 'non_gated_FakeGated'
-                partes_moles_heart_filename = 'non_gated_HeartSegs_FakeGated.nii.gz'
-                partes_moles_bones_filename = 'non_gated_BonesSegs_FakeGated.nii.gz'
-                avg_str = 'All Slices'
-            
-            for patient in tqdm(patients):
-                print(patient)
-                
+    if args.fake_gated:
+        exam_folder = 'Fake_Gated'
+        cac_th = args.cac_th
+        if avg_flag:
+            if args.avg == 4:
+                partes_moles_basename = 'non_gated_FakeGated_avg_slices=4'
+                partes_moles_heart_filename = 'non_gated_HeartSegs_FakeGated_avg_slices=4.nii.gz'
+                partes_moles_bones_filename = 'non_gated_BonesSegs_FakeGated_avg_slices=4.nii.gz'
+                avg_str = 'avg=4'
+        else:
+            partes_moles_basename = 'non_gated_FakeGated'
+            partes_moles_heart_filename = 'non_gated_HeartSegs_FakeGated.nii.gz'
+            partes_moles_bones_filename = 'non_gated_BonesSegs_FakeGated.nii.gz'
+            avg_str = 'All Slices'
+        
+        for patient in tqdm(patients):
+            print(patient)
+            try:
                 print(partes_moles_basename)
                 fg_exam_path = f'{root_path}/{patient}/{partes_moles_basename}.nii.gz'
                 fg_mask_les_path = f'{root_path}/{patient}/{partes_moles_basename}_multi_lesion.nii.gz'
@@ -237,18 +236,23 @@ if __name__ == '__main__':
                 
                 # results.append([patient, les_score_fg, roi_coronaries_score_fg, heart_score_fg])
                 results.append([patient, les_score_fg])
-                
-        #! Gated
-        if not args.fake_gated:
-            exam_folder = 'Gated'
-            cac_th = args.cac_th
-            print('Gated Agaston Score Calculation')
-            exclude_files = ['multi_label', 'multi_lesion', 'binary_lesion', '_CalciumCandidates',\
-                '_CircleSingleLesions', '_ROISingleLesions', '_circle_lesions', '_IncreasedLesion',\
-                    '_clustered=', '_LesionSingleLesions', 'SingleLesions', '_circle', 'non_gated', '_mask']
-            keywords_cardiac = ['gated']
-            for patient in tqdm(patients):
-                print(patient)
+            except Exception as e:
+                error_msg = f"{type(e).__name__}: {str(e)}"
+                print(f"✗ Failed {patient}: {error_msg}")
+                traceback.print_exc()
+            
+    #! Gated
+    if not args.fake_gated:
+        exam_folder = 'Gated'
+        cac_th = args.cac_th
+        print('Gated Agaston Score Calculation')
+        exclude_files = ['multi_label', 'multi_lesion', 'binary_lesion', '_CalciumCandidates',\
+            '_CircleSingleLesions', '_ROISingleLesions', '_circle_lesions', '_IncreasedLesion',\
+                '_clustered=', '_LesionSingleLesions', 'SingleLesions', '_circle', 'non_gated', '_mask']
+        keywords_cardiac = ['gated']
+        for patient in tqdm(patients):
+            print(patient)
+            try:
                 gated_exam_basename = get_basename(os.listdir(f'{root_path}/{patient}'), exclude_files, keywords_cardiac)
                 gated_exam_basename = gated_exam_basename.split('.nii.gz')[0]
                 print(gated_exam_basename)
@@ -296,10 +300,10 @@ if __name__ == '__main__':
                 # print(gated_mask_les.shape, gated_les_area_sum.shape)
                 # print(patient, les_score_gated, gated_les_area_sum)
                 results.append([patient, les_score_gated])
-    except Exception as e:
-        error_msg = f"{type(e).__name__}: {str(e)}"
-        print(f"✗ Failed {patient}: {error_msg}")
-        traceback.print_exc()
+            except Exception as e:
+                error_msg = f"{type(e).__name__}: {str(e)}"
+                print(f"✗ Failed {patient}: {error_msg}")
+                traceback.print_exc()
 
 
     # df_score_ref = pd.read_excel('data/EXAMES/cac_score_data.xlsx')
