@@ -18,19 +18,6 @@ import nibabel as nib
 import argparse
 from tqdm import tqdm
 
-def get_cardiac_basename(files):
-    exclude_files = ['multi_label', 'multi_lesion', 'binary_lesion', '_sg']
-    files = [file for file in files if not any(f in file for f in exclude_files)]
-    # gated_exam_basename = [file for file in files if 'cardiac' in file]
-    gated_exam_basename = [file for file in files if '_g' in file]
-    return gated_exam_basename[0]
-
-def get_partes_moles_basename(files):
-    exclude_files=['partes_moles_HeartSegs', 'partes_moles_FakeGated_CircleMask', 'multi_label', 'multi_lesion', 'binary_lesion']
-    files = [file for file in files if not any(f in file for f in exclude_files)]
-    gated_exam_basename = [file for file in files if 'partes_moles_body' in file or 'mediastino' in file]
-    return gated_exam_basename[0]
-
 def main(args):
     print('--- Start processing ---')
     # Define directories
@@ -61,12 +48,8 @@ def main(args):
         print('Processing patient: ' + patient)
         # Read image
         basename = f'{patient}_gated.nii.gz'
-        # basename = get_cardiac_basename(os.listdir(os.path.join(data_dir, patient, patient)))
-        # basename = get_cardiac_basename(os.listdir(os.path.join(data_dir, patient)))
-        # basename = 'test'
-        # save_filename = 'cardiac'
         save_filename = basename.split('.')[0]
-        if args.non_gated:
+        if args.fake_gated:
             print('Inferring Fake Gated exam for patient')
             basename = 'non_gated_FakeGated_avg_slices=4.nii.gz'
             save_filename = basename.split('.')[0]
@@ -179,7 +162,7 @@ if __name__ == '__main__':
     parser.add_argument('--device', '-gpu', type=str,
                         action='store', dest='device',
                         help='Device NO. of GPU')
-    parser.add_argument('--non_gated', action='store_true', help='Whether to infer non_gated exams')
+    parser.add_argument('--fake_gated', action='store_true', help='Whether to infer fake gated exams')
 
     args = parser.parse_args()
     main(args)
