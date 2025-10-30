@@ -109,6 +109,21 @@ if __name__ == '__main__':
     parser.add_argument('--num_workers', type=int, default=None, help='Number of worker processes (default: CPU count)')
     args = parser.parse_args()
     
+        # --- INÍCIO DA MODIFICAÇÃO ---
+    # Força o download dos modelos no processo principal antes de iniciar os workers.
+    print("="*60)
+    print("Verificando e baixando modelos do TotalSegmentator (se necessário)...")
+    try:
+        # Cria uma imagem NIfTI falsa para acionar o download
+        dummy_img = nib.Nifti1Image(np.zeros((10, 10, 10), dtype=np.int16), np.eye(4))
+        # Executa uma tarefa leve para garantir que os modelos sejam baixados
+        totalsegmentator(dummy_img, output_path=None, task='total', quiet=False, skip_saving=True, device='gpu')
+        print("Modelos do TotalSegmentator prontos.")
+    except Exception as e:
+        print(f"Falha ao pré-carregar os modelos: {e}")
+        print("O script continuará, mas pode haver downloads repetidos em cada processo.")
+    print("="*60)
+    
     # Determinar número de workers
     num_workers = args.num_workers if args.num_workers else multiprocessing.cpu_count()
     print(f"Using {num_workers} worker(s)")
