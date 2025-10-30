@@ -24,12 +24,6 @@ def circumscribing_rectangle(center, radius):
     # Return x, y, w, h
     return x_min, y_min, x_max - x_min, y_max - y_min
 
-def get_partes_moles_basename(files):
-    exclude_files=['partes_moles_HeartSegs', 'partes_moles_FakeGated_CircleMask', 'multi_label', 'multi_lesion', 'binary_lesion']
-    files = [file for file in files if not any(f in file for f in exclude_files)]
-    gated_exam_basename = [file for file in files if 'partes_moles_body' in file or 'mediastino' in file]
-    return gated_exam_basename[0]
-
 def upsample_fill_mask(mask, new_shape):
     mask2 = np.zeros((new_shape[0], new_shape[1], mask.shape[2]))
     for i in range(mask.shape[2]):
@@ -45,15 +39,28 @@ def upsample_mask(mask, new_shape):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate Fake Gated Images')
-    parser.add_argument('--root_path', type=str, default='data/EXAMES/Exames_NIFTI', help='Root path to the NIfTI files')
-    parser.add_argument('--output_path', type=str, default='data/EXAMES/Exames_NIFTI', help='Output path for the generated images')
+    parser.add_argument('--root_path', type=str, default='data/ExamesArya_NIFTI2', help='Root path to the NIfTI files')
+    parser.add_argument('--output_path', type=str, default='data/ExamesArya_NIFTI2', help='Output path for the generated images')
     args = parser.parse_args()
 
     root_path = args.root_path
     output_path = args.output_path
     patients = os.listdir(root_path)
     
-    exam_type = 'partes_moles'
+    exclude_files = ['_HeartSegs',
+                     '_BonesSegs',
+                     '_FakeGated',
+                     '_FakeGated_CircleMask',
+                     'multi_label',
+                     'multi_lesion',
+                     'binary_lesion',
+                     '_mask',
+                     'CalciumCandidates',
+                     'IncreasedLesion',
+                     'LesionsSingleLesions',
+                     'SingleLesions']
+        
+    exam_type = 'non_gated'
     new_img_size = (512, 512)
     blur_metrics = []
     dim_scale_factors = (1, 1, 1/4)
@@ -65,10 +72,10 @@ if __name__ == '__main__':
         print(patient)
             
         patient_output_path = os.path.join(output_path, patient)
-        patient_path = os.path.join(root_path, patient, patient)
-        heart_segs_data = nib.load(os.path.join(patient_path, 'partes_moles_HeartSegs.nii.gz'))
-        bones_segs_data = nib.load(os.path.join(patient_path, 'partes_moles_BonesSegs.nii.gz'))
-        heart_circle_segs_data = nib.load(os.path.join(patient_path, 'partes_moles_HeartSegs_dilat_k=10.nii.gz'))
+        patient_path = os.path.join(root_path, patient)
+        heart_segs_data = nib.load(os.path.join(patient_path, 'non_gated_HeartSegs.nii.gz'))
+        bones_segs_data = nib.load(os.path.join(patient_path, 'non_gated_BonesSegs.nii.gz'))
+        heart_circle_segs_data = nib.load(os.path.join(patient_path, 'non_gated_HeartSegs_dilat_k=10.nii.gz'))
 
         heart_mask = heart_segs_data.get_fdata()
         bones_mask = bones_segs_data.get_fdata()
@@ -87,6 +94,7 @@ if __name__ == '__main__':
         max_slice = heart_circle_mask[:, :, max_index]
         coordinates = np.argwhere(max_slice)
 
+        # Creating the zoom circle simulating gated exam
         # Calculate the centroid from the Total Segmentator Heart Mask
         centroid = coordinates.mean(axis=0)
         circle_mask = np.zeros(max_slice.shape)
@@ -104,10 +112,10 @@ if __name__ == '__main__':
         circle_mask = np.repeat(circle_mask[:, :, np.newaxis], heart_circle_mask.shape[2], axis=2)
 
         # Save the new NIfTI image
-        create_save_nifti(circle_mask, heart_segs_data.affine, f'{output_path}/partes_moles_FakeGated_CircleMask.nii.gz')
+        create_save_nifti(circle_mask, heart_segs_data.affine, f'{output_path}/non_gated_FakeGated_CircleMask.nii.gz')
         
         nifti_files = os.listdir(patient_path)
-        motion_filename = get_partes_moles_basename(nifti_files)
+        motion_filename = get_basename(nifti_files, exclude_files=exclude_files, keywords=['non_gated'])
         print(f"Processing {motion_filename} - Patient {patient}")
         
         input_img = nib.load(os.path.join(patient_path, motion_filename))#.get_fdata()
@@ -132,16 +140,16 @@ if __name__ == '__main__':
         
         ct_data_no_bones = ct_data_upsampled.copy()
         ct_data_no_bones[bones_mask_upsampled > 0] = 0
-        create_save_nifti(ct_data_no_bones, heart_segs_data.affine, f'{output_path}/partes_moles_FakeGated_no_bones.nii.gz')
-        create_save_nifti(ct_data_upsampled, heart_segs_data.affine, f'{output_path}/partes_moles_FakeGated.nii.gz')
-        create_save_nifti(bones_mask_upsampled, bones_segs_data.affine, f'{output_path}/partes_moles_BonesSegs_FakeGated.nii.gz')
-        create_save_nifti(heart_mask_upsampled, heart_segs_data.affine, f'{output_path}/partes_moles_HeartSegs_FakeGated.nii.gz')
-        
-        print(f'{output_path}/partes_moles_HeartSegs_FakeGated.nii.gz')
-        print(f'{output_path}/partes_moles_BonesSegs_FakeGated.nii.gz')
-        print(f'{output_path}/partes_moles_FakeGated.nii.gz')
-        
-        new_z_spacing = 3.0
+        create_save_nifti(ct_data_no_bones, heart_segs_data.affine, f'{output_path}/non_gated_FakeGated_no_bones.nii.gz')
+        create_save_nifti(ct_data_upsampled, heart_segs_data.affine, f'{output_path}/non_gated_FakeGated.nii.gz')
+        create_save_nifti(bones_mask_upsampled, bones_segs_data.affine, f'{output_path}/non_gated_BonesSegs_FakeGated.nii.gz')
+        create_save_nifti(heart_mask_upsampled, heart_segs_data.affine, f'{output_path}/non_gated_HeartSegs_FakeGated.nii.gz')
+
+        print(f'{output_path}/non_gated_HeartSegs_FakeGated.nii.gz')
+        print(f'{output_path}/non_gated_BonesSegs_FakeGated.nii.gz')
+        print(f'{output_path}/non_gated_FakeGated.nii.gz')
+
+        new_z_spacing = 3.0 # Fixed value of gated exams
         imgSize = ct_data_upsampled.shape; # Tamanho do volume da ct
         imgNewSize = round(imgSize[2] / (new_z_spacing / input_img.header.get_zooms()[2])); # eu to pegando apenas o eixo Z
         dim_scale_factors = (1, 1, imgNewSize / imgSize[2])
@@ -164,10 +172,10 @@ if __name__ == '__main__':
         new_affine = input_img.affine.copy()
         new_affine[2, 2] *= (new_z_spacing / input_img.header.get_zooms()[2])  # Ajusta transformação no eixo Z
 
-        create_save_nifti(ct_data_upsampled, new_affine, f'{output_path}/partes_moles_FakeGated_avg_slices=4.nii.gz')
-        create_save_nifti(heart_mask, new_affine, f'{output_path}/partes_moles_HeartSegs_FakeGated_avg_slices=4.nii.gz')
-        create_save_nifti(bones_mask, new_affine, f'{output_path}/partes_moles_BonesSegs_FakeGated_avg_slices=4.nii.gz')
-        
-        print(f'{output_path}/partes_moles_FakeGated_avg_slices=4.nii.gz')
-        print(f'{output_path}/partes_moles_HeartSegs_FakeGated_avg_slices=4.nii.gz')
-        print(f'{output_path}/partes_moles_BonesSegs_FakeGated_avg_slices=4.nii.gz')
+        create_save_nifti(ct_data_upsampled, new_affine, f'{output_path}/non_gated_FakeGated_avg_slices=4.nii.gz')
+        create_save_nifti(heart_mask, new_affine, f'{output_path}/non_gated_HeartSegs_FakeGated_avg_slices=4.nii.gz')
+        create_save_nifti(bones_mask, new_affine, f'{output_path}/non_gated_BonesSegs_FakeGated_avg_slices=4.nii.gz')
+
+        print(f'{output_path}/non_gated_FakeGated_avg_slices=4.nii.gz')
+        print(f'{output_path}/non_gated_HeartSegs_FakeGated_avg_slices=4.nii.gz')
+        print(f'{output_path}/non_gated_BonesSegs_FakeGated_avg_slices=4.nii.gz')

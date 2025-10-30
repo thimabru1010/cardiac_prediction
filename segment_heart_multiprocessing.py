@@ -169,8 +169,7 @@ if __name__ == '__main__':
         print(f"Falha ao pré-carregar os modelos: {e}")
     print("="*60)
     # --- FIM DA MODIFICAÇÃO ---
-    
-    # exclude_files = ['_HeartSegs', '_FakeGated', '_FakeGated_CircleMask', 'multi_label', 'multi_lesion', 'binary_lesion', '_mask']
+
     exclude_files = ['_HeartSegs',
                      '_BonesSegs',
                      '_FakeGated',
