@@ -217,8 +217,8 @@ if __name__ == '__main__':
             create_save_nifti(1 - fg_bones_mask, fg_exam_img.affine, f'{root_path}/{patient}/{partes_moles_basename}_NOT_BonesSegs_FakeGated_avg_slices=4.nii.gz')
 
             pixel_spacing = fg_exam_img.header.get_zooms()[:3]  # (x, y, z) spacing
-            les_score_fg, connected_les, les_clssf_data = calculate_score(fg_exam, fg_mask_les, fg_heart_mask, fg_bones_mask, calc_candidates_mask,\
-                pixel_spacing, patient_id=patient, th=cac_th)
+            les_score_fg, connected_les, les_clssf_data = calculate_score(fg_exam, fg_mask_les, fg_bones_mask, calc_candidates_mask=calc_candidates_mask,\
+                pixel_spacing=pixel_spacing, patient_id=patient, th=cac_th)
             
             # roi_coronaries_score_fg, _, _ = calculate_score(fg_exam, roi_coronaries_mask, fg_heart_mask, fg_bones_mask, calc_candidates_mask,\
             #     pixel_spacing, patient_id=patient, th=cac_th)
