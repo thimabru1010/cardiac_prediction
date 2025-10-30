@@ -66,12 +66,9 @@ def main(args):
         # basename = 'test'
         # save_filename = 'cardiac'
         save_filename = basename.split('.')[0]
-        if args.partes_moles:
-            print('Inferring partes_moles')
-            # basename = get_partes_moles_basename(os.listdir(os.path.join(data_dir, patient, patient)))
-            # basename = 'partes_moles_FakeGated_mean_slice=3mm.nii.gz'
-            # basename = 'partes_moles_FakeGated_avg_slices=4.nii.gz'
-            # basename = 'partes_moles_FakeGated_avg_slices=4.nii.gz'
+        if args.non_gated:
+            print('Inferring Fake Gated exam for patient')
+            basename = 'non_gated_FakeGated_avg_slices=4.nii.gz'
             save_filename = basename.split('.')[0]
         filename = os.path.join(data_dir, patient, basename)
         image_sitk = sitk.ReadImage(filename)
@@ -181,8 +178,8 @@ if __name__ == '__main__':
                         help='Directory of predictions')
     parser.add_argument('--device', '-gpu', type=str,
                         action='store', dest='device',
-                        help='Devoce NO. of GPU')
-    parser.add_argument('--partes_moles', action='store_true', help='Whether to infer partes_moles exams')
+                        help='Device NO. of GPU')
+    parser.add_argument('--non_gated', action='store_true', help='Whether to infer non_gated exams')
 
     args = parser.parse_args()
     main(args)
