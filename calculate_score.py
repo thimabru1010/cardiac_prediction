@@ -206,16 +206,16 @@ if __name__ == '__main__':
             
             calc_candidates_mask = calculate_candidates_mask(fg_exam, th=cac_th)
             
-            create_save_nifti(calc_candidates_mask, fg_exam_img.affine, f'{root_path}/{patient}/{patient}/{partes_moles_basename}_CalciumCandidates.nii.gz')
+            create_save_nifti(calc_candidates_mask, fg_exam_img.affine, f'{root_path}/{patient}/{partes_moles_basename}_CalciumCandidates.nii.gz')
             
             if args.dilate:
                 fg_mask_les = cv2.dilate(fg_mask_les, kernel, iterations=args.dilate_it)
             
             print(fg_mask_les.shape, fg_heart_mask.shape, fg_bones_mask.shape, calc_candidates_mask.shape)
-            create_save_nifti(fg_mask_les, fg_exam_img.affine, f'{root_path}/{patient}/{patient}/{partes_moles_basename}_multi_lesion_dilate_it={dilate_it}_dilate_k={args.dilate_kernel}.nii.gz')
-            create_save_nifti(fg_mask_les*fg_heart_mask*(1 - fg_bones_mask)*calc_candidates_mask, fg_exam_img.affine, f'{root_path}/{patient}/{patient}/{partes_moles_basename}_lesions_dilate_it={dilate_it}_dilate_k={args.dilate_kernel}_final_mask.nii.gz')
-            create_save_nifti(1 - fg_bones_mask, fg_exam_img.affine, f'{root_path}/{patient}/{patient}/partes_moles_NOT_BonesSegs_FakeGated_avg_slices=4')
-            
+            create_save_nifti(fg_mask_les, fg_exam_img.affine, f'{root_path}/{patient}/{partes_moles_basename}_multi_lesion_dilate_it={dilate_it}_dilate_k={args.dilate_kernel}.nii.gz')
+            create_save_nifti(fg_mask_les*fg_heart_mask*(1 - fg_bones_mask)*calc_candidates_mask, fg_exam_img.affine, f'{root_path}/{patient}/{partes_moles_basename}_lesions_dilate_it={dilate_it}_dilate_k={args.dilate_kernel}_final_mask.nii.gz')
+            create_save_nifti(1 - fg_bones_mask, fg_exam_img.affine, f'{root_path}/{patient}/{partes_moles_basename}_NOT_BonesSegs_FakeGated_avg_slices=4.nii.gz')
+
             pixel_spacing = fg_exam_img.header.get_zooms()[:3]  # (x, y, z) spacing
             les_score_fg, connected_les, les_clssf_data = calculate_score(fg_exam, fg_mask_les, fg_heart_mask, fg_bones_mask, calc_candidates_mask,\
                 pixel_spacing, patient_id=patient, th=cac_th)
