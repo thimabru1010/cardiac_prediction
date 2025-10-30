@@ -117,7 +117,7 @@ if __name__ == '__main__':
         # Cria uma imagem NIfTI falsa para acionar o download
         dummy_img = nib.Nifti1Image(np.zeros((10, 10, 10), dtype=np.int16), np.eye(4))
         # Executa uma tarefa leve para garantir que os modelos sejam baixados
-        totalsegmentator(dummy_img, output_path=None, task='total', quiet=False, skip_saving=True, device='gpu')
+        totalsegmentator(dummy_img, output=None, task='total', quiet=False, skip_saving=True, device='gpu')
         print("Modelos do TotalSegmentator prontos.")
     except Exception as e:
         print(f"Falha ao pré-carregar os modelos: {e}")
