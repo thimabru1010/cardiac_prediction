@@ -155,13 +155,20 @@ if __name__ == '__main__':
     try:
         # Cria uma imagem NIfTI falsa para acionar o download
         dummy_img = nib.Nifti1Image(np.zeros((10, 10, 10), dtype=np.int16), np.eye(4))
-        # Executa uma tarefa leve para garantir que os modelos sejam baixados
+        
+        # 1. Pré-carrega o modelo principal 'total'
+        print("Pré-carregando modelo 'total'...")
         totalsegmentator(dummy_img, output=None, task='total', roi_subset=rois, quiet=False, skip_saving=True, device='gpu')
+        
+        # 2. Pré-carrega o modelo secundário 'lung_vessels' (task_298)
+        print("Pré-carregando modelo 'lung_vessels'...")
+        totalsegmentator(dummy_img, output=None, task='lung_vessels', quiet=False, skip_saving=True, device='gpu')
+
         print("Modelos do TotalSegmentator prontos.")
     except Exception as e:
         print(f"Falha ao pré-carregar os modelos: {e}")
-        print("O script continuará, mas pode haver downloads repetidos em cada processo.")
     print("="*60)
+    # --- FIM DA MODIFICAÇÃO ---
     
     exclude_files = ['_HeartSegs', '_FakeGated', '_FakeGated_CircleMask', 'multi_label', 'multi_lesion', 'binary_lesion', '_mask']
     keywords = ['non_gated']
