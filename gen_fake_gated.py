@@ -102,9 +102,6 @@ if __name__ == '__main__':
         center = (int(centroid[1]), int(centroid[0]))
         cv2.circle(circle_mask, center, radius=radius, color=1, thickness=-1)
         # Get the rectangle circunscribing the circle
-        # Get the coordinates of the non-zero pixels in the circle mask
-        non_zero_coords = np.argwhere(circle_mask)
-        rect = cv2.boundingRect(non_zero_coords)
         rect = circumscribing_rectangle(center, radius)
         x, y, w, h = rect
         

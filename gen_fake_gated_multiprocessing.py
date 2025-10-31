@@ -73,8 +73,7 @@ def process_patient(patient, root_path, output_path, exclude_files, new_img_size
         center = (int(centroid[1]), int(centroid[0]))
         cv2.circle(circle_mask, center, radius=radius, color=1, thickness=-1)
         
-        non_zero_coords = np.argwhere(circle_mask)
-        rect = cv2.boundingRect(non_zero_coords.astype(np.uint8))
+        rect = circumscribing_rectangle(center, radius)
         x, y, w, h = rect
         
         circle_mask = np.repeat(circle_mask[:, :, np.newaxis], heart_circle_mask.shape[2], axis=2)
