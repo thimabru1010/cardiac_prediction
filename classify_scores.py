@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import confusion_matrix, accuracy_score, f1_score, classification_report
 import argparse
-import mlflow
 import os
 import numpy as np
 import matplotlib.pyplot as plt
