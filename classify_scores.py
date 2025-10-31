@@ -37,7 +37,7 @@ def plot_tpr_tnr_curve(y_true, y_scores, title="TPR vs TNR Curve"):
     fig.savefig(f'data/EXAMES/Experiments_Metrics/{title}.png', dpi=300)
     plt.close()
     
-def linear_corr_plot(valores_reais, valores_estimados, title="Linear Correlation Plot", save_path=None):
+def linear_corr_plot(valores_reais, valores_estimados, title="Linear Correlation Plot", save_path=None, show_plot=False):
     # Trace a melhor reta que se ajusta aos dados
     slope, intercept = np.polyfit(valores_estimados, valores_reais, 1)
     
@@ -63,12 +63,18 @@ def linear_corr_plot(valores_reais, valores_estimados, title="Linear Correlation
     plt.ylabel("Real Values")
     plt.legend()
     plt.grid(alpha=0.3)
-    plt.show()
+    if show_plot:
+        plt.show()
     fig.savefig(os.path.join(save_path, title + '.png'), dpi=300)
     plt.close()
 
 
-def bland_altman_plot(data1, data2, limit_of_agreement=1.96, title="Bland-Altman Plot", save_path=None):
+def bland_altman_plot(data1,
+                      data2,
+                      limit_of_agreement=1.96,
+                      title="Bland-Altman Plot",
+                      save_path=None,
+                      show_plot=False):
     """
     Gera um gráfico de Bland-Altman para comparar dois conjuntos de dados.
 
@@ -102,7 +108,8 @@ def bland_altman_plot(data1, data2, limit_of_agreement=1.96, title="Bland-Altman
     plt.ylabel("Diferença entre medições")
     plt.legend()
     plt.grid(alpha=0.5)
-    plt.show()
+    if show_plot:
+        plt.show()
     # fig.savefig(f'data/EXAMES/Experiments_Metrics/{exam_type}/{avg_str}/{title}.png', dpi=300)
     fig.savefig(os.path.join(save_path, title + '.png'), dpi=300)
     plt.close()
@@ -212,6 +219,7 @@ if __name__ == '__main__':
     argparser.add_argument('--clssf_mode', '-clssf', type=int, default=3, help='Classification Mode')
     # argparser.add_argument('--scores0', action='store_true', help='Whether to also use scores0 for classification')
     argparser.add_argument('--scores0_path', type=str, default=None, help='CSV filepath with the calcium scores0')
+    argparser.add_argument('--show_plots', action='store_true', help='Whether to show the plots')
     args = argparser.parse_args()
     
     avg_str = 'avg=4' if args.avg4 else 'All Slices'
@@ -388,18 +396,25 @@ if __name__ == '__main__':
     df.rename(columns={'Pacient': 'Patient', 'Lesion Gated': 'Lesion'}, inplace=True)
     
     save_path = os.path.join("data/Experiments_Metrics", exam_type, avg_str, threshold)
-    linear_corr_plot(df['Escore'], df['Lesion'], title=f'{exam_type} {avg_str} {max_f1_method} ',\
-        save_path=save_path)
-    
-    bland_altman_plot(df['Escore'], df['Lesion'], title=f'{exam_type} {avg_str} {max_f1_method} - Bland-Altman Plot',\
-        save_path=save_path)
+    linear_corr_plot(df['Escore'],
+                     df['Lesion'],
+                     title=f'{exam_type} {avg_str} {max_f1_method} ',
+                     save_path=save_path,
+                     show_plot=args.show_plots)
+
+    bland_altman_plot(df['Escore'],
+                      df['Lesion'],
+                      title=f'{exam_type} {avg_str} {max_f1_method} - Bland-Altman Plot',
+                      save_path=save_path,
+                      show_plot=args.show_plots)
 
     df_best = pd.read_csv(os.path.join(folder_path, best_filename))
     sns.histplot(df_best['Lesion Error'], bins=50)
     plt.title(f'{exam_type} {avg_str} {max_f1_method} - Error Histogram')
     plt.tight_layout()
     plt.savefig(os.path.join(exp_root_path, 'error_histogram.png'), dpi=300)
-    plt.show()
+    if args.show_plots:
+        plt.show()
     plt.close()
     
     #! Plot ACC
@@ -416,7 +431,8 @@ if __name__ == '__main__':
         if label.get_text() == max_acc_method:
             label.set_fontweight('bold')
     plt.savefig(os.path.join(exp_root_path, 'accuracy_metrics.png'), dpi=300)
-    plt.show()
+    if args.show_plots:
+        plt.show()
     plt.close()
     
     #! Plot F1 Score
@@ -430,7 +446,8 @@ if __name__ == '__main__':
         if label.get_text() == max_f1_method:
             label.set_fontweight('bold')     
     plt.savefig(os.path.join(exp_root_path, 'f1_metrics.png'), dpi=300)
-    plt.show()
+    if args.show_plots:
+        plt.show()
     plt.close()
     
     #! Plot Avg Error
@@ -445,5 +462,6 @@ if __name__ == '__main__':
         if label.get_text() == max_f1_method:
             label.set_fontweight('bold')
     plt.savefig(os.path.join(exp_root_path, 'error_metrics.png'), dpi=300)
-    plt.show()
+    if args.show_plots:
+        plt.show()
     plt.close()
