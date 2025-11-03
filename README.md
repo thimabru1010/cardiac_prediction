@@ -15,12 +15,12 @@ You can convert DICOM to NIFTI using the `dcm2nifti.py` script.
 ```
 DICOM_Data
   |-- patient_id01
-  |   |-- G1.dcm
-  |   |-- G2.dcm
-  |   ...
-  |   |-- SG1.dcm
-  |   |-- SG2.dcm
-  |    ...
+      |-- G1.dcm
+      |-- G2.dcm
+      ...
+      |-- SG1.dcm
+      |-- SG2.dcm
+      ...
   |-- patient_id02
   ...
 ```
@@ -69,6 +69,31 @@ The name means that the `non_gated_FakeGated.nii.gz`, which has the same number 
 ## Segment calcification lesions with MTAL_CACS
 You can either segment the gated or the fake gated exams.
 
+```
+python cacs_predict.py --model_dir --data_dir [INPUT DIR] --prediction_dir [OUTPUT DIR] -gpu cuda --fake_gated [IF YOU'RE PROCS FAKE GATED EXAMS]
+```
+Three files will be created inside the nifti folder. Their filenames will be and extension of the original input filename with the following logic. Suppose the input_filename.nii.gz, the files created will be:
+`[input_filename]_binary_lesion.nii.gz`, `[input_filename]_multi_lesion.nii.gz`, `[input_filename]_multi_label.nii.gz`.
+
+## Calculate Scores
+
+Now that we have all the necessary segmentations extracted we can calculate the Agatston Score.
+
+In this step, we're going to estimate to agatston score from the fake gated file and compare with its reference score which is saved in a csv file.
+
+```
+python calculate_score.py --root_path [INPUT FOLDER PATH] --csv_path [CSV WITH REFS] --fake_gated [WHETHER OR NOT] --cac_th 130 [DEFAULT VALUE FOR AGATSTON SCORE]
+```
+A folder called `Calcium_Score_Estimations` will be created and a csv with estimated values, references and erros will be save inside it.
+
+## Classify Scores
+
+Now we're going to calculate some metrics and make some plots to evaluate the estimated scores.
+
+```python classify_scores.py --folder_path [Calcium Score Estimations folder] --fake_gated [WHETHER OR NOT] --avg4 [TO INFER THE AVERAGED EXAM OF FAKE GATED] --show_plots [IF U WANT TO SHOW]
+```
+
+The results of this script will be saved inside `Experiments_Metrics`. A confusion matrix will be created along with bland altman and linear correlation plot. Metrics will be displayed inside terminal.
 
 
 
