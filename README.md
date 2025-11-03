@@ -15,12 +15,12 @@ You can convert DICOM to NIFTI using the `dcm2nifti.py` script.
 ```
 DICOM_Data
   |-- patient_id01
-      |-- G1.dcm
-      |-- G2.dcm
-      ...
-      |-- SG1.dcm
-      |-- SG2.dcm
-      ...
+  |   |-- G1.dcm
+  |   |-- G2.dcm
+  |   ...
+  |   |-- SG1.dcm
+  |   |-- SG2.dcm
+  |    ...
   |-- patient_id02
   ...
 ```
