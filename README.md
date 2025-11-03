@@ -90,7 +90,8 @@ A folder called `Calcium_Score_Estimations` will be created and a csv with estim
 
 Now we're going to calculate some metrics and make some plots to evaluate the estimated scores.
 
-```python classify_scores.py --folder_path [Calcium Score Estimations folder] --fake_gated [WHETHER OR NOT] --avg4 [TO INFER THE AVERAGED EXAM OF FAKE GATED] --show_plots [IF U WANT TO SHOW]
+```
+python classify_scores.py --folder_path [Calcium Score Estimations folder] --fake_gated [WHETHER OR NOT] --avg4 [TO INFER THE AVERAGED EXAM OF FAKE GATED] --show_plots [IF U WANT TO SHOW]
 ```
 
 The results of this script will be saved inside `Experiments_Metrics`. A confusion matrix will be created along with bland altman and linear correlation plot. Metrics will be displayed inside terminal.
