@@ -150,6 +150,7 @@ class CardiacNIFTIDataset(Dataset):
         label_tensor = torch.from_numpy(label_tensor).squeeze(0).long()  # remove canal se for 1
         binary_lesions = torch.zeros_like(label_tensor)
         binary_lesions[label_tensor > 0] = 1
+        # binary_lesions[label_tensor == 4] = 2  # Other calcifications como classe separada
         
         # print("Image tensor shape before unsqueeze:", image_tensor.shape)
         # print("Label tensor shape after unsqueeze:", label_tensor.shape )
