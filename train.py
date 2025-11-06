@@ -64,7 +64,7 @@ if __name__ == "__main__":
     val_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=True)
 
     # Initialize model
-    model = MTALModel(device=device)
+    model = MTALModel(device=device, lesion_classes=1)
     model.create()
     model.load("MTAL_CACS/model/model.pt")
 
@@ -74,7 +74,8 @@ if __name__ == "__main__":
     # Initialize loss function
     if args.loss == "ce":
         multi_les_criterion = nn.CrossEntropyLoss()
-        bin_les_criterion = nn.CrossEntropyLoss()
+        # bin_les_criterion = nn.CrossEntropyLoss()
+        bin_les_criterion = nn.BCEWithLogitsLoss()
     elif args.loss == "focal":
         class_weights = torch.tensor([1.0, 1.0, 1.0]).to(device)
         multi_les_criterion = FocalLoss(mode="multiclass", gamma=args.focal_gamma, alpha=class_weights)

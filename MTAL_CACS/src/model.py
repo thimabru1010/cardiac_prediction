@@ -14,12 +14,14 @@ class MTALModel():
     MTALModel - Multi task model
     """
     
-    def __init__(self, device='cuda'):
+    def __init__(self, device='cuda', lesion_classes=2, region_classes=4):
         
         # Init params
         self.params=dict()
         self.params['lr'] = 0.005
         self.params['device'] = device
+        self.lesion_classes = lesion_classes
+        self.region_classes = region_classes
 
     def create(self):
         """
@@ -114,14 +116,14 @@ class MTALModel():
                 self.conv_double_out = nn.Sequential(
                     nn.Conv2d(16, 4,  kernel_size=3, stride=1, padding=1),
                     nn.LeakyReLU(0.2),
-                    nn.Conv2d(4, 4,  kernel_size=3, stride=1, padding=1)
+                    nn.Conv2d(4, self.region_classes,  kernel_size=3, stride=1, padding=1)
                 )
                 
                 # self.softmax = nn.Softmax(dim=1)
                 
                 self.conv0 = nn.Conv2d(32, 16, kernel_size=3, padding=1, stride=1)
                 self.relu0 = nn.LeakyReLU(0.2)
-                self.conv1 = nn.Conv2d(16, 2, kernel_size=3, padding=1, stride=1)
+                self.conv1 = nn.Conv2d(16, self.lesion_classes, kernel_size=3, padding=1, stride=1)
                 self.soft = nn.Softmax(dim=1)
 
                 self.dropout0 = nn.Dropout(p=0.5)
@@ -173,8 +175,9 @@ class MTALModel():
                 xoutc2 = self.relu0(xoutc1)
                 xoutc3 = self.conv1(xoutc2)
                 # xoutc4 = self.soft(xoutc3)
-
-                return xout, xoutc3
+                Y_region = xout
+                Y_lesion = xoutc3
+                return Y_region, Y_lesion
 
         # Create model
         mtal = MTAL()
