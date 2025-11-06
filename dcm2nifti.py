@@ -72,7 +72,7 @@ if __name__ == '__main__':
     patients = os.listdir(root_path)
     patients_error = []
     for patient in tqdm(patients):
-        patient = '105655'
+        # patient = '105655'
         print(patient)
         patient_path = os.path.join(root_path, patient)
         output_path = os.path.join(root_output, patient)
@@ -94,6 +94,8 @@ if __name__ == '__main__':
         gated_np = gated_vol["arr"]
         print(np.min(gated_np), np.max(gated_np), np.mean(gated_np))
         label_vol = load_dicom_volume_from_list([os.path.join(patient_path, f) for f in label_files])
+        labels_unq = np.unique(label_vol["arr"])
+        print(f"Label unique values: {labels_unq}")
         non_gated_vol = load_dicom_volume_from_list([os.path.join(patient_path, f) for f in non_gated_files])
         non_gated_arr = non_gated_vol["arr"]
         print(non_gated_arr.min(), non_gated_arr.max(), non_gated_arr.mean())

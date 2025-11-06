@@ -20,6 +20,7 @@ if __name__ == "__main__":
     parser.add_argument("--decoder_type", type=str, default="both", choices=["both", "binary", "coronaries"], help="Tipo de decoder a ser utilizado.")
     parser.add_argument("-lr", "--learning_rate", type=float, default=1e-4, help="Taxa de aprendizado para o otimizador.")
     parser.add_argument("--map_labels", action="store_true", help="Mapeia os labels do dataset para os labels esperados pelo modelo.")
+    parser.add_argument("--train_csv", type=str, default="data/train.csv", help="Caminho para o arquivo CSV de treino.")
     args = parser.parse_args()
 
     exp_dir = os.path.join("data/experiments", args.exp_name)
@@ -31,7 +32,7 @@ if __name__ == "__main__":
     print(f"Using device: {device}")
     
     # Load dataset
-    df_train = pd.read_csv(os.path.join("data", "train.csv"))
+    df_train = pd.read_csv(args.train_csv)
     dataset = CardiacNIFTIDataset(
         root=args.data_dir,
         label_suffix="_mask",

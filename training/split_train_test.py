@@ -27,13 +27,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Script para dividir dataset em treino e teste.")
     parser.add_argument("--data_dir", type=str, default="data/ExamesArya_CalcSegTraining2", help="Diretório dos dados de entrada.")
     parser.add_argument("--seed", type=int, default=42, help="Semente para reprodução da divisão.")
+    parser.add_argument("--test_size", type=float, default=0.3, help="Proporção dos dados para o conjunto de teste.")
     args = parser.parse_args()
 
     filenames = read_files(args.data_dir)
     df = pd.DataFrame(filenames)
 
     # Dividir em treino e teste
-    train_data = df.sample(frac=0.7, random_state=args.seed)
+    train_data = df.sample(frac=1-args.test_size, random_state=args.seed)
     test_data = df.drop(train_data.index)
     
     print(train_data.head())
@@ -44,7 +45,9 @@ if __name__ == "__main__":
     print(f"Train samples: {len(train_data)}")
     print(f"Test samples: {len(test_data)}")
     
+    output_folder = os.path.join("data", "train_test_csvs")
+    os.makedirs(output_folder, exist_ok=True)
 
     # Salvar os dados divididos
-    train_data.to_csv(os.path.join("data", "train.csv"), index=False)
-    test_data.to_csv(os.path.join("data", "test.csv"), index=False)
+    train_data.to_csv(os.path.join(output_folder, f"train_seed{args.seed}_test_size{args.test_size}.csv"), index=False)
+    test_data.to_csv(os.path.join(output_folder, f"test_seed{args.seed}_test_size{args.test_size}.csv"), index=False)
