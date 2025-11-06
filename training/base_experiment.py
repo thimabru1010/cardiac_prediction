@@ -85,8 +85,8 @@ class BaseExperiment:
             inputs, multi_les_targets, binary_les_targets = self._unpack_batch(batch)
             self.optimizer.zero_grad()
             y_region, y_lesion = self.model(inputs)
-            multi_les_loss = self.criterion(y_lesion, multi_les_targets)
-            binary_les_loss = self.criterion(y_region, binary_les_targets)
+            multi_les_loss = self.criterion(y_region, multi_les_targets)
+            binary_les_loss = self.criterion(y_lesion, binary_les_targets)
             batch_size = inputs.size(0)
             
             loss = multi_les_loss + binary_les_loss
@@ -125,8 +125,8 @@ class BaseExperiment:
             for batch in tqdm(dataloader, desc="Validation"):
                 inputs, multi_les_targets, binary_les_targets = self._unpack_batch(batch)
                 y_region, y_lesion = self.model(inputs)
-                multi_les_loss = self.criterion(y_lesion, multi_les_targets)
-                binary_les_loss = self.criterion(y_region, binary_les_targets)
+                multi_les_loss = self.criterion(y_region, multi_les_targets)
+                binary_les_loss = self.criterion(y_lesion, binary_les_targets)
                 batch_size = inputs.size(0)
                 
                 
