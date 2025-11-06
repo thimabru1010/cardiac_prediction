@@ -72,7 +72,7 @@ if __name__ == '__main__':
     patients = os.listdir(root_path)
     patients_error = []
     for patient in tqdm(patients):
-        # patient = '180132'
+        patient = '105655'
         print(patient)
         patient_path = os.path.join(root_path, patient)
         output_path = os.path.join(root_output, patient)
@@ -95,6 +95,8 @@ if __name__ == '__main__':
         print(np.min(gated_np), np.max(gated_np), np.mean(gated_np))
         label_vol = load_dicom_volume_from_list([os.path.join(patient_path, f) for f in label_files])
         non_gated_vol = load_dicom_volume_from_list([os.path.join(patient_path, f) for f in non_gated_files])
+        non_gated_arr = non_gated_vol["arr"]
+        print(non_gated_arr.min(), non_gated_arr.max(), non_gated_arr.mean())
         print("Saving NIFTI files...")
         sitk.WriteImage(gated_vol["img"], os.path.join(output_path, f"{patient}_gated.nii.gz"))
         sitk.WriteImage(label_vol["img"], os.path.join(output_path, f"{patient}_mask.nii.gz"))

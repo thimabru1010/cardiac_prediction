@@ -73,7 +73,7 @@ if __name__ == '__main__':
         
     for patient in tqdm(patients):
         print(patient)
-        # patient = '268912'
+        patient = '105655' 
         patient_path = os.path.join(args.root_path, patient)
         nifti_files = os.listdir(patient_path)
         motion_filename = get_basename(nifti_files, exclude_files=exclude_files, keywords=keywords)

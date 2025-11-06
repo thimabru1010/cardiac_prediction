@@ -136,10 +136,10 @@ def classify2(x):
     if x == 0.0: # 2.5
         # return 'sem_risco'
         return 0
-    elif x > 0 and x <= 400: # 2.5 - 10
+    elif x > 0 and x < 400: # 2.5 - 10
         # return 'risco_intermediario'
         return 1
-    elif x > 400: # >= 10
+    elif x >= 400: # >= 10
         # return 'alto_risco'
         return 2
     
@@ -210,7 +210,8 @@ if __name__ == '__main__':
     warnings.simplefilter(action='ignore', category=FutureWarning)
     argparser = argparse.ArgumentParser(description='Classify the calcium scores')
     # argparser.add_argument('--scores_path', type=str, default='data/EXAMES/Calcium_Scores_Estimations/calcium_score_estimations.csv', help='CSV filepath with the calcium scores')
-    argparser.add_argument('--folder_path', type=str, default='data/EXAMES/Calcium_Scores_Estimations/', help='Folder path to load csv files')
+    # argparser.add_argument('--folder_path', type=str, default='data/EXAMES/Calcium_Scores_Estimations/', help='Folder path to load csv files')
+    argparser.add_argument('--filename', type=str, default=None, help='CSV filename with the calcium scores')
     argparser.add_argument('--fake_gated', action='store_true', help='Whether classify fake_gated scores')
     argparser.add_argument('--avg4', action='store_true', help='Whether to use partes_moles exams averaged by 4 slices (3.2mm)')
     argparser.add_argument('--threshold', '-th', type=str, default=130, help='Calcification Threshold in HU')
@@ -219,171 +220,138 @@ if __name__ == '__main__':
     # argparser.add_argument('--scores0', action='store_true', help='Whether to also use scores0 for classification')
     argparser.add_argument('--scores0_path', type=str, default=None, help='CSV filepath with the calcium scores0')
     argparser.add_argument('--show_plots', action='store_true', help='Whether to show the plots')
+    argparser.add_argument('--output_folder', type=str, default='', help='Path to save the output plots and metrics')
     args = argparser.parse_args()
     
     avg_str = 'avg=4' if args.avg4 else 'All Slices'
     print(avg_str)
     exam_type = 'Fake_Gated' if args.fake_gated else 'Gated'
-    if exam_type == 'Fake_Gated':
-        folder_path = os.path.join(args.folder_path, exam_type, avg_str, args.threshold)
-    else:
+    # if exam_type == 'Fake_Gated':
+    #     folder_path = os.path.join(args.folder_path, exam_type, avg_str, args.threshold)
+    # else:
+    #     avg_str = ''
+    #     folder_path = os.path.join(args.folder_path, exam_type, args.threshold)
+        
+    if exam_type == 'Gated':
         avg_str = ''
-        folder_path = os.path.join(args.folder_path, exam_type, args.threshold)
-    files = os.listdir(folder_path)
+    # files = os.listdir(folder_path)
     threshold = args.threshold
-    # files = ['calcium_score_estimations_dilate_it=5_dilate_k=7.csv']
-    max_f1 = 0
-    max_acc = 0
-    max_f1_error = 0
-    max_f1_method = ''
-    max_acc_method = ''
-    best_filename = ''
-    metrics = []
-    print(files)
-    exp_root_path = f'data/Experiments_Metrics/{exam_type}/{avg_str}/{threshold}/clssf_mode={args.clssf_mode}'
+    # max_f1 = 0
+    # max_acc = 0
+    # max_f1_error = 0
+    # max_f1_method = ''
+    # max_acc_method = ''
+    # best_filename = ''
+    # metrics = []
+    # print(files)
+    exp_root_path = f'data/Experiments_Metrics/{exam_type}/{avg_str}/{threshold}/clssf_mode={args.clssf_mode}/{args.output_folder}'
     if not os.path.exists(exp_root_path):
         os.makedirs(exp_root_path)
     
     # Exclude scores0 files if args.scores0 is True
-    if args.scores0_path is not None:
-        files = [f for f in files if 'scores0' not in f]
+    # if args.scores0_path is not None:
+    #     files = [f for f in files if 'scores0' not in f]
         
-    for filename in files:
-        print(filename)
-        # scores_path = args.scores_path
-        scores_path = os.path.join(folder_path, filename)
-        
-        dilate_it = None
-        dilate_k = None
-        exp_name = "Experiment No Dilation"
-        run_name = "No Dilation"
-        if 'dilate' in scores_path:
-            dilate_it = get_integers_from_string(scores_path, 'dilate_it=')
-            dilate_k = get_integers_from_string(scores_path, 'dilate_k=')
-            print(dilate_it, dilate_k)
-                
-            exp_name = f"Experiment dilated it={dilate_it} k={dilate_k}"
-            run_name = f"dilated it={dilate_it} k={dilate_k}"
+    # for filename in files:
+    print(f"Processing file: {args.filename}")
+    # scores_path = args.scores_path
+    scores_path = os.path.join(args.filename)
+
+    # dilate_it = None
+    # dilate_k = None
+    # exp_name = "Experiment No Dilation"
+    # run_name = "No Dilation"
+    # if 'dilate' in scores_path:
+    #     dilate_it = get_integers_from_string(scores_path, 'dilate_it=')
+    #     dilate_k = get_integers_from_string(scores_path, 'dilate_k=')
+    #     print(dilate_it, dilate_k)
             
-        df = pd.read_csv(scores_path)
-        if args.scores0_path is not None:
-            df_scores0 = pd.read_csv(args.scores0_path)
-            df = pd.concat([df, df_scores0[['patient', 'Escore', 'Lesion', 'Lesion Error']]], ignore_index=True)
-        df.columns = df.columns.str.strip()
+    #     exp_name = f"Experiment dilated it={dilate_it} k={dilate_k}"
+    #     run_name = f"dilated it={dilate_it} k={dilate_k}"
         
-        df['Escore'] = df['Escore'].astype(float)
-        df['Lesion'] = df['Lesion'].astype(float)
-        print(df['Escore'].values)
-        # print(df.head(100))
-        # print("DEBUG")
-        # print(df.columns)
-        
-        # Change column names
-        df.rename(columns={'Pacient': 'Patient', 'ROI Gated': 'ROI', 'Lesion Gated': 'Lesion', 'Heart Mask Gated': 'Heart Mask'}, inplace=True)
-        # print(df['Lesion'].values)
-        df['Label'] = df['Escore'].apply(lambda x: classify(x, args.clssf_mode))
-        df['Lesion Clssf'] = df['Lesion'].apply(lambda x: classify(x, args.clssf_mode))
-        # df['Heart Clssf'] = df['Heart Mask'].apply(lambda x: classify(x, args.clssf_mode))
-        # df['Cor. ROI'] = df['Cor. ROI'].apply(lambda x: classify(x, args.clssf_mode))
+    df = pd.read_csv(scores_path)
+    if args.scores0_path is not None:
+        df_scores0 = pd.read_csv(args.scores0_path)
+        df = pd.concat([df, df_scores0[['patient', 'Escore', 'Lesion', 'Lesion Error']]], ignore_index=True)
+    df.columns = df.columns.str.strip()
+    
+    df['Escore'] = df['Escore'].astype(float)
+    df['Lesion'] = df['Lesion'].astype(float)
+    print(df['Escore'].values)
+    # print(df.head(100))
+    # print("DEBUG")
+    # print(df.columns)
+    
+    # Change column names
+    df.rename(columns={'Pacient': 'Patient', 'ROI Gated': 'ROI', 'Lesion Gated': 'Lesion', 'Heart Mask Gated': 'Heart Mask'}, inplace=True)
+    # print(df['Lesion'].values)
+    df['Label'] = df['Escore'].apply(lambda x: classify(x, args.clssf_mode))
+    df['Lesion Clssf'] = df['Lesion'].apply(lambda x: classify(x, args.clssf_mode))
+    # df['Heart Clssf'] = df['Heart Mask'].apply(lambda x: classify(x, args.clssf_mode))
+    # df['Cor. ROI'] = df['Cor. ROI'].apply(lambda x: classify(x, args.clssf_mode))
 
-        acc_lesion_gated = (df['Label'] == df['Lesion Clssf']).sum() / len(df)
-        # acc_heart_gated = (df['Label'] == df['Heart Clssf']).sum() / len(df)
-        # acc_cor_roi_gated = (df['Label'] == df['Cor. ROI']).sum() / len(df)
-        # print("DEBUG")
-        # print(df['Lesion Clssf'].values)
-        f1_score_lesion_gated = f1_score(df['Label'].values, df['Lesion Clssf'].values, average='weighted')
-        # f1_score_heart_gated = f1_score(df['Label'].values, df['Heart Clssf'].values, average='weighted')
-        # f1_score_cor_roi_gated = f1_score(df['Label'].values, df['Cor. ROI'].values, average='weighted')
-        avg_error = df['Lesion Error'].mean()
-        
-        print(f'Accuracy Lesion: {acc_lesion_gated}')
-        # print(f'Accuracy Heart: {acc_heart_gated}')
-        # print(f'Accuracy Cor. ROI: {acc_cor_roi_gated}')
-        print('-'*50)
-        print(f'F1 Score Lesion: {f1_score_lesion_gated}')
-        # print(f'F1 Score Heart: {f1_score_heart_gated}')
-        # print(f'F1 Score Cor. ROI: {f1_score_cor_roi_gated}')
-        print()
-        print(f'Avg Lesion Error: {avg_error}')    
-        
-        metrics.append([run_name, acc_lesion_gated, f1_score_lesion_gated, avg_error])
-        
-        # Define class names
+    acc = (df['Label'] == df['Lesion Clssf']).sum() / len(df)
+    # acc_heart_gated = (df['Label'] == df['Heart Clssf']).sum() / len(df)
+    # acc_cor_roi_gated = (df['Label'] == df['Cor. ROI']).sum() / len(df)
+    # print("DEBUG")
+    # print(df['Lesion Clssf'].values)
+    f1 = f1_score(df['Label'].values, df['Lesion Clssf'].values, average='weighted')
+    # f1_score_heart_gated = f1_score(df['Label'].values, df['Heart Clssf'].values, average='weighted')
+    # f1_score_cor_roi_gated = f1_score(df['Label'].values, df['Cor. ROI'].values, average='weighted')
+    avg_error = df['Lesion Error'].mean()
+    
+    print(f'Accuracy Lesion: {acc}')
+    # print(f'Accuracy Heart: {acc_heart_gated}')
+    # print(f'Accuracy Cor. ROI: {acc_cor_roi_gated}')
+    print('-'*50)
+    print(f'F1 Score Lesion: {f1}')
+    # print(f'F1 Score Heart: {f1_score_heart_gated}')
+    # print(f'F1 Score Cor. ROI: {f1_score_cor_roi_gated}')
+    print()
+    print(f'Avg Lesion Error: {avg_error}')    
+    
+    # metrics.append([acc, f1, avg_error])
+    metrics = [[acc, f1, avg_error]]
+    
+    # Define class names
+    if args.clssf_mode == 3:
         class_names = ['=0', '>=1 <300', '>=300']
-
-        # Create base directories for confusion matrices
-        cm_base_path = os.path.join(exp_root_path, 'Confusion_Matrices')
-        
-        # Method-specific directories
-        lesion_cm_dir = os.path.join(cm_base_path, 'Lesion')
-        # heart_cm_dir = os.path.join(cm_base_path, 'Heart_Mask')
-        # roi_cm_dir = os.path.join(cm_base_path, 'Cor_ROI')
-        
-        # Create directories if they don't exist
-        # for dir_path in [lesion_cm_dir, heart_cm_dir, roi_cm_dir]:
-        for dir_path in [lesion_cm_dir]:
-            os.makedirs(dir_path, exist_ok=True)
-        
-        # File naming based on dilation parameters
-        if dilate_it is not None and dilate_k is not None:
-            file_suffix = f'dilated_it={dilate_it}_k={dilate_k}.png'
-        else:
-            file_suffix = 'no_dilation.png'
-        
-        print(df['Label'].values.shape, df['Lesion Clssf'].values.shape)
-        # Generate confusion matrices for each method
-        lesion_sensitivity, lesion_specificity = generate_confusion_matrix(
-            df['Label'].values, 
-            df['Lesion Clssf'].values, 
-            class_names, 
-            f'Lesion Confusion Matrix {exam_type} {avg_str} {run_name}',
-            os.path.join(lesion_cm_dir, f'confusion_matrix_{file_suffix}')
-        )
-        
-        # heart_sensitivity, heart_specificity = generate_confusion_matrix(
-        #     df['Label'].values, 
-        #     df['Heart Clssf'].values, 
-        #     class_names, 
-        #     f'Heart Mask Confusion Matrix {exam_type} {avg_str} {run_name}',
-        #     os.path.join(heart_cm_dir, f'confusion_matrix_{file_suffix}')
-        # )
-        
-        # roi_sensitivity, roi_specificity = generate_confusion_matrix(
-        #     df['Label'].values, 
-        #     df['Cor. ROI'].values, 
-        #     class_names, 
-        #     f'Corrected ROI Confusion Matrix {exam_type} {avg_str} {run_name}',
-        #     os.path.join(roi_cm_dir, f'confusion_matrix_{file_suffix}')
-        # )
-        
-        print(f'Lesion - Sensitivity: {lesion_sensitivity}')
-        print(f'Lesion - Specificity: {lesion_specificity}')
-        print('test')
-        # print(f'Heart Mask - Sensitivity: {heart_sensitivity}')
-        # print(f'Heart Mask - Specificity: {heart_specificity}')
-        # print(f'Coronaries ROI - Sensitivity: {roi_sensitivity}')
-        # print(f'Coronaries ROI - Specificity: {roi_specificity}')
-        
-        if max_f1 < f1_score_lesion_gated:
-            max_f1 = f1_score_lesion_gated
-            max_f1_method = run_name
-            max_f1_error = avg_error
-            print(f'Max F1 Score: {max_f1}')
-            best_filename = filename
-            best_sensitivity = lesion_sensitivity
-            best_specificity = lesion_specificity
-            max_acc = acc_lesion_gated
-            print(f'Max F1 Accuracy: {max_acc}')
-            print(f'Max F1 Avg Error: {max_f1_error}')
+    if args.clssf_mode == 2:
+        class_names = ['=0', '>=1 <400', '>=400']
+    
+    print(df['Label'].values.shape, df['Lesion Clssf'].values.shape)
+    # Generate confusion matrices for each method
+    lesion_sensitivity, lesion_specificity = generate_confusion_matrix(
+        df['Label'].values, 
+        df['Lesion Clssf'].values, 
+        class_names, 
+        f'Lesion Confusion Matrix {exam_type} {avg_str}',
+        os.path.join(exp_root_path, f'confusion_matrix.png')
+    )
+    
+    print(f'Lesion - Sensitivity: {lesion_sensitivity}')
+    print(f'Lesion - Specificity: {lesion_specificity}')
+    
+    # if max_f1 < f1_score_lesion_gated:
+    #     max_f1 = f1_score_lesion_gated
+    #     max_f1_method = run_name
+    #     max_f1_error = avg_error
+    #     print(f'Max F1 Score: {max_f1}')
+    #     best_filename = args.filename
+    #     best_sensitivity = lesion_sensitivity
+    #     best_specificity = lesion_specificity
+    #     max_acc = acc_lesion_gated
+    #     print(f'Max F1 Accuracy: {max_acc}')
+    #     print(f'Max F1 Avg Error: {max_f1_error}')
 
     print()
-    print(f'Best method F1: {max_f1_method} - F1 Score: {max_f1} - Accuracy: {max_acc} - Sensitivity: {best_sensitivity} - Specificity: {best_specificity}')
+    print(f'F1 Score: {f1} - Accuracy: {acc} - Sensitivity: {lesion_sensitivity} - Specificity: {lesion_specificity}')
     
-    max_acc_method = max_f1_method
+    # max_acc_method = max_f1_method
     # Load the best method
-    filename = best_filename
-    print(f"Best filename: {filename}")
-    scores_path = os.path.join(folder_path, filename)
+    # filename = best_filename
+    # print(f"Best filename: {filename}")
+    # scores_path = os.path.join(folder_path, filename)
     df = pd.read_csv(scores_path)
     if args.scores0_path is not None:
         df_scores0 = pd.read_csv(args.scores0_path)
@@ -393,74 +361,85 @@ if __name__ == '__main__':
     # Change column names
     # df.rename(columns={'Pacient': 'Patient', 'ROI Gated': 'ROI', 'Lesion Gated': 'Lesion', 'Heart Mask Gated': 'Heart Mask'}, inplace=True)
     df.rename(columns={'Pacient': 'Patient', 'Lesion Gated': 'Lesion'}, inplace=True)
-    
-    save_path = os.path.join("data/Experiments_Metrics", exam_type, avg_str, threshold)
+    # save_path = os.path.join("data/Experiments_Metrics", exam_type, avg_str, threshold, args.output_folder)
+    # os.makedirs(save_path, exist_ok=True)
     linear_corr_plot(df['Escore'],
                      df['Lesion'],
-                     title=f'{exam_type} {avg_str} {max_f1_method} ',
-                     save_path=save_path,
+                     title=f'{exam_type} {avg_str}',
+                     save_path=exp_root_path,
                      show_plot=args.show_plots)
 
     bland_altman_plot(df['Escore'],
                       df['Lesion'],
-                      title=f'{exam_type} {avg_str} {max_f1_method} - Bland-Altman Plot',
-                      save_path=save_path,
+                      title=f'{exam_type} {avg_str} - Bland-Altman Plot',
+                      save_path=exp_root_path,
                       show_plot=args.show_plots)
 
-    df_best = pd.read_csv(os.path.join(folder_path, best_filename))
-    sns.histplot(df_best['Lesion Error'], bins=50)
-    plt.title(f'{exam_type} {avg_str} {max_f1_method} - Error Histogram')
+    # df_best = pd.read_csv(best_filename)
+    sns.histplot(df['Lesion Error'], bins=50)
+    plt.title(f'{exam_type} {avg_str} - Error Histogram')
     plt.tight_layout()
     plt.savefig(os.path.join(exp_root_path, 'error_histogram.png'), dpi=300)
     if args.show_plots:
         plt.show()
     plt.close()
     
+    # Save acc, f1 and avg error metrics to a csv file
+    df_metrics = pd.DataFrame(metrics, columns=['Accuracy', 'F1 Score', 'Error'])
+    # df_metrics['Method'] = ['Lesion']
+    # Add Sensitivity and Specificity columns
+    df_metrics['Sensitivity_Class_0'] = lesion_sensitivity[0]
+    df_metrics['Sensitivity_Class_1'] = lesion_sensitivity[1]
+    df_metrics['Sensitivity_Class_2'] = lesion_sensitivity[2]
+    df_metrics['Specificity_Class_0'] = lesion_specificity[0]
+    df_metrics['Specificity_Class_1'] = lesion_specificity[1]
+    df_metrics['Specificity_Class_2'] = lesion_specificity[2]
+    df_metrics.to_csv(os.path.join(exp_root_path, 'classification_metrics.csv'), index=False)
     #! Plot ACC
-    df_metrics = pd.DataFrame(metrics, columns=['Method', 'Accuracy', 'F1 Score', 'Error'])
-    # Define a color palette
-    palette = sns.color_palette("husl", len(df_metrics))
-    fig = plt.figure(figsize=(9,6))
-    ax = sns.barplot(x='Method', y='Accuracy', data=df_metrics, palette=palette, hue='Method', legend=False)
-    plt.title(f'{exam_type} {avg_str} - Accuracy Metrics')
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    # Make the best method bold on the x-axis
-    for label in ax.get_xticklabels():
-        if label.get_text() == max_acc_method:
-            label.set_fontweight('bold')
-    plt.savefig(os.path.join(exp_root_path, 'accuracy_metrics.png'), dpi=300)
-    if args.show_plots:
-        plt.show()
-    plt.close()
+    # df_metrics = pd.DataFrame(metrics, columns=['Accuracy', 'F1 Score', 'Error'])
+    # # Define a color palette
+    # palette = sns.color_palette("husl", len(df_metrics))
+    # fig = plt.figure(figsize=(9,6))
+    # ax = sns.barplot(x='Method', y='Accuracy', data=df_metrics, palette=palette, hue='Method', legend=False)
+    # plt.title(f'{exam_type} {avg_str} - Accuracy Metrics')
+    # plt.xticks(rotation=45)
+    # plt.tight_layout()
+    # # Make the best method bold on the x-axis
+    # for label in ax.get_xticklabels():
+    #     if label.get_text() == max_acc_method:
+    #         label.set_fontweight('bold')
+    # plt.savefig(os.path.join(exp_root_path, 'accuracy_metrics.png'), dpi=300)
+    # if args.show_plots:
+    #     plt.show()
+    # plt.close()
     
     #! Plot F1 Score
-    fig = plt.figure(figsize=(9,6))
-    ax = sns.barplot(x='Method', y='F1 Score', data=df_metrics, palette=palette, hue='Method', legend=False)
-    plt.title(f'{exam_type} {avg_str} - F1 Score Metrics')
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    # Make the best method bold on the x-axis
-    for label in ax.get_xticklabels():
-        if label.get_text() == max_f1_method:
-            label.set_fontweight('bold')     
-    plt.savefig(os.path.join(exp_root_path, 'f1_metrics.png'), dpi=300)
-    if args.show_plots:
-        plt.show()
-    plt.close()
+    # fig = plt.figure(figsize=(9,6))
+    # ax = sns.barplot(x='Method', y='F1 Score', data=df_metrics, palette=palette, hue='Method', legend=False)
+    # plt.title(f'{exam_type} {avg_str} - F1 Score Metrics')
+    # plt.xticks(rotation=45)
+    # plt.tight_layout()
+    # # Make the best method bold on the x-axis
+    # for label in ax.get_xticklabels():
+    #     if label.get_text() == max_f1_method:
+    #         label.set_fontweight('bold')     
+    # plt.savefig(os.path.join(exp_root_path, 'f1_metrics.png'), dpi=300)
+    # if args.show_plots:
+    #     plt.show()
+    # plt.close()
     
     #! Plot Avg Error
-    # Plot the average error per method in a barplot
-    fig = plt.figure(figsize=(9,6))
-    ax = sns.barplot(x='Method', y='Error', data=df_metrics, palette=palette, hue='Method', legend=False)
-    plt.title(f'{exam_type} {avg_str} - Average Error Metrics')
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    # Make the best method bold on the x-axis
-    for label in ax.get_xticklabels():
-        if label.get_text() == max_f1_method:
-            label.set_fontweight('bold')
-    plt.savefig(os.path.join(exp_root_path, 'error_metrics.png'), dpi=300)
-    if args.show_plots:
-        plt.show()
-    plt.close()
+    # # Plot the average error per method in a barplot
+    # fig = plt.figure(figsize=(9,6))
+    # ax = sns.barplot(x='Method', y='Error', data=df_metrics, palette=palette, hue='Method', legend=False)
+    # plt.title(f'{exam_type} {avg_str} - Average Error Metrics')
+    # plt.xticks(rotation=45)
+    # plt.tight_layout()
+    # # Make the best method bold on the x-axis
+    # for label in ax.get_xticklabels():
+    #     if label.get_text() == max_f1_method:
+    #         label.set_fontweight('bold')
+    # plt.savefig(os.path.join(exp_root_path, 'error_metrics.png'), dpi=300)
+    # if args.show_plots:
+    #     plt.show()
+    # plt.close()

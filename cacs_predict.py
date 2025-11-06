@@ -44,6 +44,7 @@ def main(args):
     patients = os.listdir(data_dir)
     exclusion_patients = []
     for patient in tqdm(patients):
+        patient = '105655'
         if patient in exclusion_patients:
             continue
         print('Processing patient: ' + patient)
@@ -58,9 +59,11 @@ def main(args):
             filename = os.path.join(data_dir, patient, basename)
             image_sitk = sitk.ReadImage(filename)
             image = sitk.GetArrayFromImage(image_sitk)
-
             # Verify image values
             print(np.min(image), np.max(image), np.mean(image))
+            # Clip image data
+            image = np.clip(image, -2048, 5000)
+            
             # Normalize image data
             Xmin = -2000
             Xmax = 1300

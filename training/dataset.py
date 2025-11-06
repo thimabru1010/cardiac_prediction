@@ -129,18 +129,27 @@ class CardiacNIFTIDataset(Dataset):
         image_path, label_path, sample_id = self.samples[idx]
         print(image_path, label_path, sample_id)
         image_tensor = self._load_npy(image_path)
+        # Clip and normalize
+        image_tensor = np.clip(image_tensor, -2048, 5000)
         image_tensor_norm = self._normalize(image_tensor)
 
-        label_tensor = None
-        if label_path is not None:
-            label_tensor = self._load_npy(label_path)
-            # TODO: Apply map only to fine tunned model. Keep it for the original model.
-            if self.map_labels:
-                label_tensor = map_labels_to_original(label_tensor)
-            # exclude Other Calcifications for while (class 4)
-            label_tensor[label_tensor == 4] = 0
-            # Converte para long (segmentações)
-            label_tensor = torch.from_numpy(label_tensor).squeeze(0).long()  # remove canal se for 1
+        # label_tensor = None
+        # if label_path is not None:
+        label_tensor = self._load_npy(label_path)
+        # TODO: Apply map only to fine tunned model. Keep it for the original model.
+        if self.map_labels:
+            label_tensor = map_labels_to_original(label_tensor)
+        # exclude Other Calcifications for while (class 4)
+        label_tensor[label_tensor == 4] = 0
+        # For each class if total pixels < 10 set to background
+        for class_id in range(1, 4):
+            if np.sum(label_tensor == class_id) <= 10:
+                label_tensor[label_tensor == class_id] = 0
+        
+        # Converte para long (segmentações)
+        label_tensor = torch.from_numpy(label_tensor).squeeze(0).long()  # remove canal se for 1
+        binary_lesions = torch.zeros_like(label_tensor)
+        binary_lesions[label_tensor > 0] = 1
         
         # print("Image tensor shape before unsqueeze:", image_tensor.shape)
         # print("Label tensor shape after unsqueeze:", label_tensor.shape )
@@ -151,7 +160,8 @@ class CardiacNIFTIDataset(Dataset):
         input_image = torch.stack((image_tensor_norm.to(torch.float32), calc_candidates.to(torch.float32)), dim=0).to(torch.float32)  # add channel dim if missing
         sample = {
             "image": input_image,
-            "label": label_tensor,
+            "multi_lesions": label_tensor,
+            'binary_lesions': binary_lesions,
             "id": sample_id,
         }
         

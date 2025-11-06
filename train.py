@@ -69,7 +69,6 @@ if __name__ == "__main__":
 
     metrics = {
         "accuracy": accuracy,
-        "loss": lambda outputs, labels: criterion(outputs, labels).item(),
         "precision": precision_macro,
         "recall": recall_macro,
         "f1_score": f1_macro,
@@ -97,7 +96,7 @@ if __name__ == "__main__":
     )
 
     # Start training
-    experiment.fit(
+    experiment.train(
         train_loader=train_loader,
         val_loader=val_loader,
         epochs=args.num_epochs,

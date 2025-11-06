@@ -79,26 +79,26 @@ class BaseExperiment:
         metric_sums = {k: 0.0 for k in self.metrics}
         count = 0
         for batch in tqdm(dataloader, desc="Training"):
-            inputs, targets = self._unpack_batch(batch)
+            inputs, multi_les_targets, binary_les_targets = self._unpack_batch(batch)
             self.optimizer.zero_grad()
             y_region, y_lesion = self.model(inputs)
-            y_logits = combine_lesion_region_preds(y_lesion, y_region, inputs[:, 1])
-            # print(y_pred.dtype, targets.dtype)
-            # print(y_pred.shape, targets.shape)
-            # print(torch.unique(targets))
-            loss = self.criterion(y_logits, targets)
-            # self.optimizer.zero_grad()
-            loss.backward()
+            multi_les_loss = self.criterion(y_lesion, multi_les_targets)
+            binary_les_loss = self.criterion(y_region, binary_les_targets)
+            multi_les_loss.backward()
             self.optimizer.step()
             batch_size = inputs.size(0)
-            total_loss += loss.item() * batch_size
-            
-            y_pred = torch.softmax(y_logits, dim=1)
+            multi_les_loss += multi_les_loss.item() * batch_size
+            binary_les_loss += binary_les_loss.item() * batch_size
+            total_loss += (multi_les_loss + binary_les_loss)
+
+            multi_les_pred = torch.softmax(y_lesion, dim=1)
+            binary_les_pred = torch.softmax(y_region, dim=1)
+            y_pred = multi_les_pred * binary_les_pred[:, 1:].unsqueeze(1)
             for name, fn in self.metrics.items():
                 with torch.no_grad():
-                    metric_sums[name] += fn(y_pred.detach(), targets) * batch_size
+                    metric_sums[name] += fn(y_pred.detach(), multi_les_targets) * batch_size
             count += batch_size
-        avg = {"train_loss": total_loss / max(count, 1)}
+        avg = {"train_total_loss": total_loss / max(count, 1), "train_multi_les_loss": multi_les_loss / max(count, 1), "train_binary_les_loss": binary_les_loss / max(count, 1)}
         for name, v in metric_sums.items():
             avg[f"train_{name}"] = v / max(count, 1)
         return avg
@@ -110,22 +110,28 @@ class BaseExperiment:
         count = 0
         with torch.no_grad():
             for batch in tqdm(dataloader, desc="Validation"):
-                inputs, targets = self._unpack_batch(batch)
+                inputs, multi_les_targets, binary_les_targets = self._unpack_batch(batch)
                 y_region, y_lesion = self.model(inputs)
-                y_logits = combine_lesion_region_preds(y_lesion, y_region, inputs[:, 1])
-                loss = self.criterion(y_logits, targets)
+                multi_les_loss = self.criterion(y_lesion, multi_les_targets)
+                binary_les_loss = self.criterion(y_region, binary_les_targets)
+                # y_logits = combine_lesion_region_preds(y_lesion, y_region, inputs[:, 1])
+                # loss = self.criterion(y_logits, multi_les_targets)
                 batch_size = inputs.size(0)
-                total_loss += loss.item() * batch_size
-                y_pred = torch.softmax(y_logits, dim=1)
+                multi_les_loss += multi_les_loss.item() * batch_size
+                binary_les_loss += binary_les_loss.item() * batch_size
+                total_loss += (multi_les_loss + binary_les_loss)
+                multi_les_pred = torch.softmax(y_lesion, dim=1)
+                binary_les_pred = torch.softmax(y_region, dim=1)
+                y_pred = multi_les_pred * binary_les_pred[:, 1:].unsqueeze(1)
                 for name, fn in self.metrics.items():
-                    metric_sums[name] += fn(y_pred, targets) * batch_size
+                    metric_sums[name] += fn(y_pred.detach(), multi_les_targets) * batch_size
                 count += batch_size
-        avg = {"val_loss": total_loss / max(count, 1)}
+        avg = {"val_total_loss": total_loss / max(count, 1), "val_multi_les_loss": multi_les_loss / max(count, 1), "val_binary_les_loss": binary_les_loss / max(count, 1)}
         for k, v in metric_sums.items():
             avg[f"val_{k}"] = v / max(count, 1)
         return avg
 
-    def fit(
+    def train(
         self,
         train_loader: DataLoader,
         val_loader: DataLoader,
@@ -176,12 +182,13 @@ class BaseExperiment:
                     )
                 print(
                     f"{'(improved)' if improved else ''}[{epoch}/{epochs}] lr={epoch_stats['lr']:.6f} | "
-                    f"train_loss={epoch_stats['train_loss']:.4f} | val_loss={epoch_stats['val_loss']:.4f}\n"
+                    f"train_loss={epoch_stats['train_total_loss']:.4f} | train_multi_les_loss={epoch_stats['train_multi_les_loss']:.4f}\n | train_binary_les_loss={epoch_stats['train_binary_les_loss']:.4f}\n | "
+                    f"val_loss={epoch_stats['val_total_loss']:.4f} | val_multi_les_loss={epoch_stats['val_multi_les_loss']:.4f}\n | val_binary_les_loss={epoch_stats['val_binary_les_loss']:.4f}\n"
                     f"train_acc={epoch_stats.get('train_accuracy', float('nan')):.4f} | val_acc={epoch_stats.get('val_accuracy', float('nan')):.4f}\n"
-                    f"val_f1_score={epoch_stats.get('val_f1_score', float('nan')):.4f} | "
+                    f"train_f1_score={epoch_stats.get('train_f1_score', float('nan')):.4f} | val_f1_score={epoch_stats.get('val_f1_score', float('nan')):.4f} | "
                     f"val_prec={epoch_stats.get('val_precision', float('nan')):.4f} | "
                     f"val_recall={epoch_stats.get('val_recall', float('nan')):.4f} | "
-                    f"val_mIoU={epoch_stats.get('val_mIoU', float('nan')):.4f}\n"
+                    f"train_mIoU={epoch_stats.get('train_mIoU', float('nan')):.4f} | val_mIoU={epoch_stats.get('val_mIoU', float('nan')):.4f}\n"
                 )
                 if self.early_stopping.should_stop:
                     print("Early stopping triggered.")
@@ -240,16 +247,17 @@ class BaseExperiment:
 
     def _unpack_batch(
         self, batch: Any
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         # Expect (inputs, targets) or dict with keys
         if isinstance(batch, dict):
             inputs = batch["image"]
-            targets = batch["label"]
+            multi_les_targets = batch["multi_lesions"]
+            binary_les_targets = batch["binary_lesions"]
         else:
-            inputs, targets = batch
-        return inputs.to(self.device, non_blocking=True), targets.to(
+            inputs, multi_les_targets, binary_les_targets = batch
+        return inputs.to(self.device, non_blocking=True), multi_les_targets.to(
             self.device, non_blocking=True
-        )
+        ), binary_les_targets.to(self.device, non_blocking=True)
 
     def load_best(self):
         if os.path.isfile(self.best_checkpoint_path):

@@ -69,8 +69,8 @@ if __name__ == '__main__':
     vertebra_ids = list(range(26, 50))
     esternum_ids = [116, 117]
     for patient in tqdm(patients):
+        patient = '105655'
         print(patient)
-            
         patient_output_path = os.path.join(output_path, patient)
         patient_path = os.path.join(root_path, patient)
         heart_segs_data = nib.load(os.path.join(patient_path, 'non_gated_HeartSegs.nii.gz'))
@@ -80,7 +80,6 @@ if __name__ == '__main__':
         heart_mask = heart_segs_data.get_fdata()
         bones_mask = bones_segs_data.get_fdata()
         heart_circle_mask = heart_circle_segs_data.get_fdata()
-
         
         if heart_mask[heart_mask != 0].shape[0] == 0:
             print(f'No heart mask found in {patient}')
@@ -118,6 +117,7 @@ if __name__ == '__main__':
         input_img = nib.load(os.path.join(patient_path, motion_filename))#.get_fdata()
         ct_data = input_img.get_fdata()
         print('Original shape:', ct_data.shape)
+        print(f"Original CT values: min={ct_data.min()}, max={ct_data.max()}, mean={ct_data.mean()}")
         
         min_value = ct_data.min()
         ct_data = ct_data * circle_mask
@@ -127,11 +127,13 @@ if __name__ == '__main__':
         heart_mask = heart_mask[y:y+h, x:x+w]
         bones_mask = bones_mask[y:y+h, x:x+w]
         
+        print(f"Cropped CT values: min={ct_data.min()}, max={ct_data.max()}, mean={ct_data.mean()}")
         # heart_mask_upsampled = upsample_fill_mask(heart_mask, new_img_size)
         ct_data_upsampled = np.zeros((new_img_size[0], new_img_size[1], ct_data.shape[2]))
         for i in range(ct_data.shape[2]):
             ct_data_upsampled[:, :, i] = cv2.resize(ct_data[:, :, i], new_img_size, interpolation=cv2.INTER_NEAREST)
-            
+        
+        print(f"Upsampled CT values: min={ct_data_upsampled.min()}, max={ct_data_upsampled.max()}, mean={ct_data_upsampled.mean()}")
         bones_mask_upsampled = upsample_mask(bones_mask, new_img_size)
         heart_mask_upsampled = upsample_mask(heart_mask, new_img_size)
         
@@ -158,6 +160,7 @@ if __name__ == '__main__':
         heart_mask = zoom(heart_mask_upsampled, dim_scale_factors, order=0, mode='nearest')
         bones_mask = zoom(bones_mask_upsampled, dim_scale_factors, order=0, mode='nearest')
         
+        print(f"After zoom CT values: min={ct_data_upsampled.min()}, max={ct_data_upsampled.max()}, mean={ct_data_upsampled.mean()}")
         print('Reduced shape Exam:', ct_data_upsampled.shape)
         print('Reduced shape Mask:', heart_mask.shape)
         print('Reduced shape Bones:', bones_mask.shape)
