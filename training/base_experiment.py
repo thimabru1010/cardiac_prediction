@@ -172,7 +172,7 @@ class BaseExperiment:
                 if self.scheduler:
                     # Some schedulers depend on val loss, adjust if necessary
                     try:
-                        self.scheduler.step(val_stats["val_loss"])
+                        self.scheduler.step(val_stats["val_total_loss"])
                     except TypeError:
                         self.scheduler.step()
                 epoch_stats = {
