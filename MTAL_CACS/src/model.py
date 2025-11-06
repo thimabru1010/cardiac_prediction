@@ -14,19 +14,19 @@ class MTALModel():
     MTALModel - Multi task model
     """
     
-    def __init__(self, device='cuda', lesion_classes=2, region_classes=4):
+    def __init__(self, device='cuda'):
         
         # Init params
         self.params=dict()
         self.params['lr'] = 0.005
         self.params['device'] = device
-        self.lesion_classes = lesion_classes
-        self.region_classes = region_classes
 
-    def create(self):
+    def create(self, lesion_classes=2, region_classes=4):
         """
         Create model
         """
+        self.lesion_classes = lesion_classes
+        self.region_classes = region_classes
         class Conv_down(nn.Module):
             def __init__(self, in_ch, out_ch):
                 super(Conv_down, self).__init__()

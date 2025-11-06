@@ -64,8 +64,8 @@ if __name__ == "__main__":
     val_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=True)
 
     # Initialize model
-    model = MTALModel(device=device, lesion_classes=1)
-    model.create()
+    model = MTALModel(device=device)
+    model.create(lesion_classes=1)
     model.load("MTAL_CACS/model/model.pt")
 
     # Initialize optimizer
