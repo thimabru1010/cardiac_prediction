@@ -15,7 +15,7 @@ if __name__ == "__main__":
     parser.add_argument("--exp_name", type=str, default="data/exp1", help="Nome do experimento.")
     parser.add_argument("--data_dir", type=str, default="data/ExamesArya_CalcSegTraining", help="Diretório dos dados de entrada.")
     parser.add_argument("--num_epochs", type=int, default=100, help="Número de épocas para o treinamento.")
-    parser.add_argument("--batch_size", type=int, default=32, help="Tamanho do lote para o treinamento.")
+    parser.add_argument("-bs", "--batch_size", type=int, default=32, help="Tamanho do lote para o treinamento.")
     parser.add_argument("--val_split", type=float, default=0.2, help="Proporção dos dados para validação.")
     parser.add_argument("--decoder_type", type=str, default="both", choices=["both", "binary", "coronaries"], help="Tipo de decoder a ser utilizado.")
     parser.add_argument("-lr", "--learning_rate", type=float, default=1e-4, help="Taxa de aprendizado para o otimizador.")

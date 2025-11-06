@@ -127,7 +127,7 @@ class CardiacNIFTIDataset(Dataset):
 
     def __getitem__(self, idx: int) -> Dict[str, Any]:
         image_path, label_path, sample_id = self.samples[idx]
-        print(image_path, label_path, sample_id)
+        # print(image_path, label_path, sample_id)
         image_tensor = self._load_npy(image_path)
         # Clip and normalize
         image_tensor = np.clip(image_tensor, -2048, 5000)
