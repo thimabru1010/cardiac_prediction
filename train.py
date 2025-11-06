@@ -65,7 +65,7 @@ if __name__ == "__main__":
 
     # Initialize model
     model = MTALModel(device=device)
-    model.create(lesion_classes=1)
+    model.create()
     model.load("MTAL_CACS/model/model.pt")
 
     # Initialize optimizer
@@ -78,8 +78,10 @@ if __name__ == "__main__":
         bin_les_criterion = nn.BCEWithLogitsLoss()
     elif args.loss == "focal":
         class_weights = torch.tensor([1.0, 1.0, 1.0]).to(device)
+        class_weights_bin = torch.tensor([1-args.focal_alpha, args.focal_alpha]).to(device)
         multi_les_criterion = FocalLoss(mode="multiclass", gamma=args.focal_gamma, alpha=class_weights)
-        bin_les_criterion = FocalLoss(mode="binary", gamma=args.focal_gamma, alpha=args.focal_alpha)
+        bin_les_criterion = FocalLoss(mode="multiclass", gamma=args.focal_gamma, alpha=class_weights_bin)
+        # bin_les_criterion = FocalLoss(mode="binary", gamma=args.focal_gamma, alpha=class_weights_bin)
 
     if args.scheduler == "plateau":
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3, verbose=True)
