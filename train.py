@@ -77,7 +77,7 @@ if __name__ == "__main__":
         # bin_les_criterion = nn.CrossEntropyLoss()
         bin_les_criterion = nn.BCEWithLogitsLoss()
     elif args.loss == "focal":
-        class_weights = torch.tensor([1.0, 1.0, 1.0]).to(device)
+        class_weights = torch.tensor([1.0, 1.0, 1.0, 1.0]).to(device)
         class_weights_bin = torch.tensor([1-args.focal_alpha, args.focal_alpha]).to(device)
         multi_les_criterion = FocalLoss(mode="multiclass", gamma=args.focal_gamma, alpha=class_weights)
         bin_les_criterion = FocalLoss(mode="multiclass", gamma=args.focal_gamma, alpha=class_weights_bin)
