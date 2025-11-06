@@ -102,7 +102,7 @@ class BaseExperiment:
             print(binary_les_pred.shape, multi_les_pred.shape)
             print(binary_les_targets.shape, multi_les_targets.shape)
             print(torch.unique(binary_les_targets), torch.unique(multi_les_targets))
-            y_pred = multi_les_pred * binary_les_pred[:, 0].unsqueeze(1)
+            y_pred = multi_les_pred * binary_les_pred[:, 1].unsqueeze(1)
             for name, fn in self.metrics.items():
                 with torch.no_grad():
                     metric_sums[name] += fn(y_pred.detach(), multi_les_targets) * batch_size
@@ -140,7 +140,7 @@ class BaseExperiment:
 
                 multi_les_pred = torch.softmax(y_region, dim=1)
                 binary_les_pred = torch.softmax(y_lesion, dim=1)
-                y_pred = multi_les_pred * binary_les_pred[:, 1:].unsqueeze(1)
+                y_pred = multi_les_pred * binary_les_pred[:, 1].unsqueeze(1)
                 for name, fn in self.metrics.items():
                     metric_sums[name] += fn(y_pred.detach(), multi_les_targets) * batch_size
                 count += batch_size
