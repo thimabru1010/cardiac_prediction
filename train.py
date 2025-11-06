@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader, random_split
 from training.base_experiment import BaseExperiment, EarlyStoppingConfig
 from training.utils import accuracy, precision_macro, recall_macro, f1_macro, miou
 import pandas as pd
+from training.focal_loss import FocalLoss
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Script de treinamento para o modelo MTAL.")
@@ -23,6 +24,9 @@ if __name__ == "__main__":
     parser.add_argument("--train_csv", type=str, default="data/train.csv", help="Caminho para o arquivo CSV de treino.")
     parser.add_argument("--num_workers", type=int, default=4, help="Número de workers para DataLoader.")
     parser.add_argument("--scheduler", type=str, default="plateau", choices=["plateau", "cosine"], help="Tipo de scheduler de taxa de aprendizado.")
+    parser.add_argument("--loss_type", type=str, default="ce", choices=["ce", "focal"], help="Tipo de função de perda.")
+    parser.add_argument("--focal_gamma", type=float, default=2.0, help="Valor de gamma para Focal Loss (se usada).")
+    parser.add_argument("--focal_alpha", type=float, default=0.25, help="Valor de alpha para Focal Loss (se usada).")
     args = parser.parse_args()
 
     exp_dir = os.path.join("data/experiments", args.exp_name)
@@ -68,8 +72,14 @@ if __name__ == "__main__":
     optimizer = optim.Adam(model.mtal.parameters(), lr=args.learning_rate)
 
     # Initialize loss function
-    criterion = nn.CrossEntropyLoss()
-    
+    if args.loss == "ce":
+        multi_les_criterion = nn.CrossEntropyLoss()
+        bin_les_criterion = nn.CrossEntropyLoss()
+    elif args.loss == "focal":
+        class_weights = torch.tensor([1.0, 1.0, 1.0]).to(device)
+        multi_les_criterion = FocalLoss(mode="multiclass", gamma=args.focal_gamma, alpha=class_weights)
+        bin_les_criterion = FocalLoss(mode="binary", gamma=args.focal_gamma, alpha=args.focal_alpha)
+
     if args.scheduler == "plateau":
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3, verbose=True)
     else:
@@ -95,7 +105,8 @@ if __name__ == "__main__":
     experiment = BaseExperiment(
         model=model,
         optimizer=optimizer,
-        criterion=criterion,
+        multi_les_criterion=multi_les_criterion,
+        bin_les_criterion=bin_les_criterion,
         device=device,
         scheduler=scheduler,
         metrics=metrics,

@@ -50,7 +50,8 @@ class BaseExperiment:
         self,
         model: nn.Module,
         optimizer: torch.optim.Optimizer,
-        criterion: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
+        multi_les_criterion: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
+        bin_les_criterion: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
         device: torch.device | str = "cuda" if torch.cuda.is_available() else "cpu",
         scheduler: Optional[Any] = None,
         metrics: Optional[Dict[str, Callable[[torch.Tensor, torch.Tensor], torch.Tensor]]] = None,
@@ -59,7 +60,8 @@ class BaseExperiment:
     ):
         self.model = model.mtal.to(device)
         self.optimizer = optimizer
-        self.criterion = criterion
+        self.multi_les_criterion = multi_les_criterion
+        self.bin_les_criterion = bin_les_criterion
         self.device = torch.device(device)
         self.scheduler = scheduler
         self.metrics = metrics or {}
@@ -75,7 +77,6 @@ class BaseExperiment:
 
     def train_epoch(self, dataloader: DataLoader) -> Dict[str, float]:
         self.model.train()
-        total_loss = 0.0
         metric_sums = {k: 0.0 for k in self.metrics}
         count = 0
         total_loss_sum = 0.0
@@ -85,8 +86,8 @@ class BaseExperiment:
             inputs, multi_les_targets, binary_les_targets = self._unpack_batch(batch)
             self.optimizer.zero_grad()
             y_region, y_lesion = self.model(inputs)
-            multi_les_loss = self.criterion(y_region, multi_les_targets)
-            binary_les_loss = self.criterion(y_lesion, binary_les_targets)
+            multi_les_loss = self.multi_les_criterion(y_region, multi_les_targets)
+            binary_les_loss = self.bin_les_criterion(y_lesion, binary_les_targets)
             batch_size = inputs.size(0)
             
             loss = multi_les_loss + binary_les_loss
@@ -128,8 +129,8 @@ class BaseExperiment:
             for batch in tqdm(dataloader, desc="Validation"):
                 inputs, multi_les_targets, binary_les_targets = self._unpack_batch(batch)
                 y_region, y_lesion = self.model(inputs)
-                multi_les_loss = self.criterion(y_region, multi_les_targets)
-                binary_les_loss = self.criterion(y_lesion, binary_les_targets)
+                multi_les_loss = self.multi_les_criterion(y_region, multi_les_targets)
+                binary_les_loss = self.bin_les_criterion(y_lesion, binary_les_targets)
                 batch_size = inputs.size(0)
                 
                 
@@ -201,11 +202,11 @@ class BaseExperiment:
                         is_best=True,
                     )
                 print(
-                    f"{'(improved)' if improved else ''}[{epoch}/{epochs}] lr={epoch_stats['lr']:.6f} | "
-                    f"train_loss={epoch_stats['train_total_loss']:.4f} | train_mult_les_loss={epoch_stats['train_multi_les_loss']:.4f}\n | train_bin_les_loss={epoch_stats['train_binary_les_loss']:.4f}\n | "
-                    f"val_loss={epoch_stats['val_total_loss']:.4f} | val_mult_les_loss={epoch_stats['val_multi_les_loss']:.4f}\n | val_bin_les_loss={epoch_stats['val_binary_les_loss']:.4f}\n"
+                    f"{'(improved)' if improved else ''}[{epoch}/{epochs}] lr={epoch_stats['lr']:.6f}\n"
+                    f"train_loss={epoch_stats['train_total_loss']:.4f} | train_mult_les_loss={epoch_stats['train_multi_les_loss']:.4f} | train_bin_les_loss={epoch_stats['train_binary_les_loss']:.4f}\n"
+                    f"val_loss={epoch_stats['val_total_loss']:.4f} | val_mult_les_loss={epoch_stats['val_multi_les_loss']:.4f} | val_bin_les_loss={epoch_stats['val_binary_les_loss']:.4f}\n"
                     f"train_acc={epoch_stats.get('train_accuracy', float('nan')):.4f} | val_acc={epoch_stats.get('val_accuracy', float('nan')):.4f}\n"
-                    f"train_f1_score={epoch_stats.get('train_f1_score', float('nan')):.4f} | val_f1_score={epoch_stats.get('val_f1_score', float('nan')):.4f} | "
+                    f"train_f1_score={epoch_stats.get('train_f1_score', float('nan')):.4f} | val_f1_score={epoch_stats.get('val_f1_score', float('nan')):.4f}"
                     f"val_prec={epoch_stats.get('val_precision', float('nan')):.4f} | "
                     f"val_recall={epoch_stats.get('val_recall', float('nan')):.4f} | "
                     f"train_mIoU={epoch_stats.get('train_mIoU', float('nan')):.4f} | val_mIoU={epoch_stats.get('val_mIoU', float('nan')):.4f}\n"
