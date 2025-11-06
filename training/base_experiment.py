@@ -202,8 +202,8 @@ class BaseExperiment:
                     )
                 print(
                     f"{'(improved)' if improved else ''}[{epoch}/{epochs}] lr={epoch_stats['lr']:.6f} | "
-                    f"train_loss={epoch_stats['train_total_loss']:.4f} | train_multi_les_loss={epoch_stats['train_multi_les_loss']:.4f}\n | train_binary_les_loss={epoch_stats['train_binary_les_loss']:.4f}\n | "
-                    f"val_loss={epoch_stats['val_total_loss']:.4f} | val_multi_les_loss={epoch_stats['val_multi_les_loss']:.4f}\n | val_binary_les_loss={epoch_stats['val_binary_les_loss']:.4f}\n"
+                    f"train_loss={epoch_stats['train_total_loss']:.4f} | train_mult_les_loss={epoch_stats['train_multi_les_loss']:.4f}\n | train_bin_les_loss={epoch_stats['train_binary_les_loss']:.4f}\n | "
+                    f"val_loss={epoch_stats['val_total_loss']:.4f} | val_mult_les_loss={epoch_stats['val_multi_les_loss']:.4f}\n | val_bin_les_loss={epoch_stats['val_binary_les_loss']:.4f}\n"
                     f"train_acc={epoch_stats.get('train_accuracy', float('nan')):.4f} | val_acc={epoch_stats.get('val_accuracy', float('nan')):.4f}\n"
                     f"train_f1_score={epoch_stats.get('train_f1_score', float('nan')):.4f} | val_f1_score={epoch_stats.get('val_f1_score', float('nan')):.4f} | "
                     f"val_prec={epoch_stats.get('val_precision', float('nan')):.4f} | "

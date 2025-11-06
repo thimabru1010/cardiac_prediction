@@ -21,6 +21,8 @@ if __name__ == "__main__":
     parser.add_argument("-lr", "--learning_rate", type=float, default=1e-4, help="Taxa de aprendizado para o otimizador.")
     parser.add_argument("--map_labels", action="store_true", help="Mapeia os labels do dataset para os labels esperados pelo modelo.")
     parser.add_argument("--train_csv", type=str, default="data/train.csv", help="Caminho para o arquivo CSV de treino.")
+    parser.add_argument("--num_workers", type=int, default=4, help="Número de workers para DataLoader.")
+    parser.add_argument("--scheduler", type=str, default="plateau", choices=["plateau", "cosine"], help="Tipo de scheduler de taxa de aprendizado.")
     args = parser.parse_args()
 
     exp_dir = os.path.join("data/experiments", args.exp_name)
@@ -54,8 +56,8 @@ if __name__ == "__main__":
     print(f"Training set size: {len(train_set)} samples")
     print(f"Validation set size: {len(val_set)} samples")
 
-    train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=4, pin_memory=True)
-    val_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False, num_workers=4, pin_memory=True)
+    train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=True)
+    val_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=True)
 
     # Initialize model
     model = MTALModel(device=device)
@@ -67,7 +69,11 @@ if __name__ == "__main__":
 
     # Initialize loss function
     criterion = nn.CrossEntropyLoss()
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3, verbose=True)
+    
+    if args.scheduler == "plateau":
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3, verbose=True)
+    else:
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.num_epochs, eta_min=1e-6)
 
     metrics = {
         "accuracy": accuracy,
