@@ -78,18 +78,24 @@ class BaseExperiment:
         total_loss = 0.0
         metric_sums = {k: 0.0 for k in self.metrics}
         count = 0
+        total_loss_sum = 0.0
+        multi_les_loss_sum = 0.0
+        binary_les_loss_sum = 0.0
         for batch in tqdm(dataloader, desc="Training"):
             inputs, multi_les_targets, binary_les_targets = self._unpack_batch(batch)
             self.optimizer.zero_grad()
             y_region, y_lesion = self.model(inputs)
             multi_les_loss = self.criterion(y_lesion, multi_les_targets)
             binary_les_loss = self.criterion(y_region, binary_les_targets)
-            multi_les_loss.backward()
-            self.optimizer.step()
             batch_size = inputs.size(0)
-            multi_les_loss += multi_les_loss.item() * batch_size
-            binary_les_loss += binary_les_loss.item() * batch_size
-            total_loss += (multi_les_loss + binary_les_loss)
+            
+            loss = multi_les_loss + binary_les_loss
+            loss.backward()
+            self.optimizer.step()
+            total_loss_sum += loss.item() * batch_size
+            multi_les_loss_sum += multi_les_loss.item() * batch_size
+            binary_les_loss_sum += binary_les_loss.item() * batch_size
+            
 
             multi_les_pred = torch.softmax(y_lesion, dim=1)
             binary_les_pred = torch.softmax(y_region, dim=1)
@@ -98,7 +104,11 @@ class BaseExperiment:
                 with torch.no_grad():
                     metric_sums[name] += fn(y_pred.detach(), multi_les_targets) * batch_size
             count += batch_size
-        avg = {"train_total_loss": total_loss / max(count, 1), "train_multi_les_loss": multi_les_loss / max(count, 1), "train_binary_les_loss": binary_les_loss / max(count, 1)}
+        avg = {
+            "train_total_loss": total_loss_sum / max(count, 1),
+            "train_multi_les_loss": multi_les_loss_sum / max(count, 1),
+            "train_binary_les_loss": binary_les_loss_sum / max(count, 1)
+        }
         for name, v in metric_sums.items():
             avg[f"train_{name}"] = v / max(count, 1)
         return avg
@@ -108,25 +118,33 @@ class BaseExperiment:
         total_loss = 0.0
         metric_sums = {k: 0.0 for k in self.metrics}
         count = 0
+        total_loss_sum = 0.0
+        multi_les_loss_sum = 0.0
+        binary_les_loss_sum = 0.0
         with torch.no_grad():
             for batch in tqdm(dataloader, desc="Validation"):
                 inputs, multi_les_targets, binary_les_targets = self._unpack_batch(batch)
                 y_region, y_lesion = self.model(inputs)
                 multi_les_loss = self.criterion(y_lesion, multi_les_targets)
                 binary_les_loss = self.criterion(y_region, binary_les_targets)
-                # y_logits = combine_lesion_region_preds(y_lesion, y_region, inputs[:, 1])
-                # loss = self.criterion(y_logits, multi_les_targets)
                 batch_size = inputs.size(0)
-                multi_les_loss += multi_les_loss.item() * batch_size
-                binary_les_loss += binary_les_loss.item() * batch_size
-                total_loss += (multi_les_loss + binary_les_loss)
+                
+                
+                loss = multi_les_loss + binary_les_loss
+                total_loss_sum += loss.item() * batch_size
+                multi_les_loss_sum += multi_les_loss.item() * batch_size
+                binary_les_loss_sum += binary_les_loss.item() * batch_size
+
                 multi_les_pred = torch.softmax(y_lesion, dim=1)
                 binary_les_pred = torch.softmax(y_region, dim=1)
                 y_pred = multi_les_pred * binary_les_pred[:, 1:].unsqueeze(1)
                 for name, fn in self.metrics.items():
                     metric_sums[name] += fn(y_pred.detach(), multi_les_targets) * batch_size
                 count += batch_size
-        avg = {"val_total_loss": total_loss / max(count, 1), "val_multi_les_loss": multi_les_loss / max(count, 1), "val_binary_les_loss": binary_les_loss / max(count, 1)}
+        avg = {
+            "val_total_loss": total_loss_sum / max(count, 1),
+            "val_multi_les_loss": multi_les_loss_sum / max(count, 1),
+            "val_binary_les_loss": binary_les_loss_sum / max(count, 1)}
         for k, v in metric_sums.items():
             avg[f"val_{k}"] = v / max(count, 1)
         return avg
