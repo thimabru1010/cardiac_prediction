@@ -206,7 +206,7 @@ class BaseExperiment:
                     f"train_loss={epoch_stats['train_total_loss']:.4f} | train_mult_les_loss={epoch_stats['train_multi_les_loss']:.4f} | train_bin_les_loss={epoch_stats['train_binary_les_loss']:.4f}\n"
                     f"val_loss={epoch_stats['val_total_loss']:.4f} | val_mult_les_loss={epoch_stats['val_multi_les_loss']:.4f} | val_bin_les_loss={epoch_stats['val_binary_les_loss']:.4f}\n"
                     f"train_acc={epoch_stats.get('train_accuracy', float('nan')):.4f} | val_acc={epoch_stats.get('val_accuracy', float('nan')):.4f}\n"
-                    f"train_f1_score={epoch_stats.get('train_f1_score', float('nan')):.4f} | val_f1_score={epoch_stats.get('val_f1_score', float('nan')):.4f}"
+                    f"train_f1_score={epoch_stats.get('train_f1_score', float('nan')):.4f} | val_f1_score={epoch_stats.get('val_f1_score', float('nan')):.4f} | "
                     f"val_prec={epoch_stats.get('val_precision', float('nan')):.4f} | "
                     f"val_recall={epoch_stats.get('val_recall', float('nan')):.4f} | "
                     f"train_mIoU={epoch_stats.get('train_mIoU', float('nan')):.4f} | val_mIoU={epoch_stats.get('val_mIoU', float('nan')):.4f}\n"
