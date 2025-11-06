@@ -21,12 +21,10 @@ class MTALModel():
         self.params['lr'] = 0.005
         self.params['device'] = device
 
-    def create(self, lesion_classes=2, region_classes=4):
+    def create(self):
         """
         Create model
         """
-        self.lesion_classes = lesion_classes
-        self.region_classes = region_classes
         class Conv_down(nn.Module):
             def __init__(self, in_ch, out_ch):
                 super(Conv_down, self).__init__()
@@ -73,7 +71,7 @@ class MTALModel():
                 return x
             
         class MTAL(nn.Module):
-            def __init__(self, lesion_classes=2, region_classes=4):
+            def __init__(self):
                 super(MTAL, self).__init__()
 
                 #self.conv_down1 = Conv_down(props['Input_size'][2], 64)
@@ -116,14 +114,14 @@ class MTALModel():
                 self.conv_double_out = nn.Sequential(
                     nn.Conv2d(16, 4,  kernel_size=3, stride=1, padding=1),
                     nn.LeakyReLU(0.2),
-                    nn.Conv2d(4, region_classes,  kernel_size=3, stride=1, padding=1)
+                    nn.Conv2d(4, 4,  kernel_size=3, stride=1, padding=1)
                 )
                 
                 # self.softmax = nn.Softmax(dim=1)
                 
                 self.conv0 = nn.Conv2d(32, 16, kernel_size=3, padding=1, stride=1)
                 self.relu0 = nn.LeakyReLU(0.2)
-                self.conv1 = nn.Conv2d(16, lesion_classes, kernel_size=3, padding=1, stride=1)
+                self.conv1 = nn.Conv2d(16, 2, kernel_size=3, padding=1, stride=1)
                 self.soft = nn.Softmax(dim=1)
 
                 self.dropout0 = nn.Dropout(p=0.5)
@@ -180,7 +178,7 @@ class MTALModel():
                 return Y_region, Y_lesion
 
         # Create model
-        mtal = MTAL(lesion_classes=self.lesion_classes, region_classes=self.region_classes)
+        mtal = MTAL()
         mtal.train()
         if self.params['device']=='cuda':
             mtal.cuda() 
