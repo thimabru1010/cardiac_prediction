@@ -24,7 +24,7 @@ if __name__ == "__main__":
     parser.add_argument("--train_csv", type=str, default="data/train.csv", help="Caminho para o arquivo CSV de treino.")
     parser.add_argument("--num_workers", type=int, default=4, help="Número de workers para DataLoader.")
     parser.add_argument("--scheduler", type=str, default="plateau", choices=["plateau", "cosine"], help="Tipo de scheduler de taxa de aprendizado.")
-    parser.add_argument("--loss_type", type=str, default="ce", choices=["ce", "focal"], help="Tipo de função de perda.")
+    parser.add_argument("--loss", type=str, default="ce", choices=["ce", "focal"], help="Tipo de função de perda.")
     parser.add_argument("--focal_gamma", type=float, default=2.0, help="Valor de gamma para Focal Loss (se usada).")
     parser.add_argument("--focal_alpha", type=float, default=0.25, help="Valor de alpha para Focal Loss (se usada).")
     args = parser.parse_args()
