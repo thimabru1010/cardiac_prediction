@@ -22,7 +22,8 @@ if __name__ == "__main__":
     parser.add_argument("--map_labels", action="store_true", help="Mapeia os labels do dataset para os labels esperados pelo modelo.")
     args = parser.parse_args()
 
-    os.makedirs(args.exp_name, exist_ok=True)
+    exp_dir = os.path.join("experiments", args.exp_name)
+    os.makedirs(exp_dir, exist_ok=True)
     # ckpt_dir = os.path.join(args.exp_name, "checkpoints")
     # os.makedirs(ckpt_dir, exist_ok=True)
     
@@ -92,13 +93,12 @@ if __name__ == "__main__":
         scheduler=scheduler,
         metrics=metrics,
         early_stopping=early_cfg,
-        experiment_dir=args.exp_name
+        experiment_dir=exp_dir
     )
 
     # Start training
     experiment.train(
         train_loader=train_loader,
         val_loader=val_loader,
-        epochs=args.num_epochs,
-        log_every=1
+        epochs=args.num_epochs
     )

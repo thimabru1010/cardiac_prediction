@@ -136,7 +136,6 @@ class BaseExperiment:
         train_loader: DataLoader,
         val_loader: DataLoader,
         epochs: int,
-        log_every: int = 1,
         resume: bool = False,
     ) -> List[Dict[str, Any]]:
         start_epoch = 1
