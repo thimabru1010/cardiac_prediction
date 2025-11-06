@@ -18,7 +18,7 @@ class EarlyStoppingConfig:
     patience: int = 10
     min_delta: float = 0.0
     mode: str = "min"  # 'min' (smaller is better) or 'max'
-    monitor: str = "val_loss"  # metric key to watch
+    monitor: str = "val_total_loss"  # metric key to watch
 
     def is_better(self, current: float, best: float) -> bool:
         if self.mode == "min":
@@ -99,9 +99,9 @@ class BaseExperiment:
 
             multi_les_pred = torch.softmax(y_region, dim=1)
             binary_les_pred = torch.softmax(y_lesion, dim=1)
-            print(binary_les_pred.shape, multi_les_pred.shape)
-            print(binary_les_targets.shape, multi_les_targets.shape)
-            print(torch.unique(binary_les_targets), torch.unique(multi_les_targets))
+            # print(binary_les_pred.shape, multi_les_pred.shape)
+            # print(binary_les_targets.shape, multi_les_targets.shape)
+            # print(torch.unique(binary_les_targets), torch.unique(multi_les_targets))
             y_pred = multi_les_pred * binary_les_pred[:, 1].unsqueeze(1)
             for name, fn in self.metrics.items():
                 with torch.no_grad():
