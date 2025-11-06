@@ -80,8 +80,8 @@ if __name__ == "__main__":
     early_cfg = EarlyStoppingConfig(
         patience=10,      # para parar após 10 épocas sem melhora
         min_delta=0.001, # melhora mínima
-        mode="min",      # queremos minimizar val_loss
-        monitor="val_loss"
+        mode="min",      # queremos minimizar val_total_loss
+        monitor="val_total_loss"
     )
     
     # Initialize experiment
