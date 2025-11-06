@@ -99,6 +99,7 @@ class BaseExperiment:
 
             multi_les_pred = torch.softmax(y_lesion, dim=1)
             binary_les_pred = torch.softmax(y_region, dim=1)
+            print(binary_les_pred.shape, multi_les_pred.shape)
             y_pred = multi_les_pred * binary_les_pred[:, 1:].unsqueeze(1)
             for name, fn in self.metrics.items():
                 with torch.no_grad():
