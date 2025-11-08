@@ -236,7 +236,7 @@ class BaseExperiment:
                     )
                 # New: print LR transition so changes are visible
                 print(
-                    f"{'(improved)' if improved else ''}[{epoch}/{epochs}] lr={epoch_stats['lr_start']:.6f}->{epoch_stats['lr']:.6f}\n"
+                    f"{'(improved)' if improved else ''}[{epoch}/{epochs}] {epoch_stats['lr']:.6f}\n"
                     f"train_loss={epoch_stats['train_total_loss']:.4f} | train_mult_les_loss={epoch_stats['train_multi_les_loss']:.4f} | train_bin_les_loss={epoch_stats['train_binary_les_loss']:.4f}\n"
                     f"val_loss={epoch_stats['val_total_loss']:.4f} | val_mult_les_loss={epoch_stats['val_multi_les_loss']:.4f} | val_bin_les_loss={epoch_stats['val_binary_les_loss']:.4f}\n"
                     f"train_acc={epoch_stats.get('train_accuracy', float('nan')):.4f} | val_acc={epoch_stats.get('val_accuracy', float('nan')):.4f}\n"
