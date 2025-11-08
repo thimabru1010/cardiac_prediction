@@ -56,7 +56,10 @@ class BaseExperiment:
         scheduler: Optional[Any] = None,
         metrics: Optional[Dict[str, Callable[[torch.Tensor, torch.Tensor], torch.Tensor]]] = None,
         early_stopping: Optional[EarlyStoppingConfig] = None,
-        experiment_dir: str = "data/exp1"
+        experiment_dir: str = "data/exp1",
+        # New: control how/when the scheduler steps
+        scheduler_step_on: Optional[str] = None,  # 'batch' | 'epoch' | 'plateau'
+        scheduler_monitor: Optional[str] = None,  # metric key for 'plateau'
     ):
         self.model = model.mtal.to(device)
         self.optimizer = optimizer
@@ -68,6 +71,23 @@ class BaseExperiment:
         self.early_stopping = EarlyStopper(
             early_stopping if early_stopping else EarlyStoppingConfig()
         )
+        # New: store scheduler stepping behavior and auto-detect when possible
+        self.scheduler_step_on = scheduler_step_on
+        self.scheduler_monitor = scheduler_monitor or (
+            (early_stopping.monitor if early_stopping else "val_total_loss")
+        )
+        if self.scheduler and self.scheduler_step_on is None:
+            try:
+                from torch.optim.lr_scheduler import ReduceLROnPlateau, OneCycleLR, CyclicLR
+                if isinstance(self.scheduler, ReduceLROnPlateau):
+                    self.scheduler_step_on = "plateau"
+                elif isinstance(self.scheduler, (OneCycleLR, CyclicLR)):
+                    self.scheduler_step_on = "batch"
+                else:
+                    self.scheduler_step_on = "epoch"
+            except Exception:
+                self.scheduler_step_on = "epoch"
+
         self.experiment_dir = experiment_dir
         os.makedirs(self.experiment_dir, exist_ok=True)
         os.makedirs(os.path.join(self.experiment_dir, "weights"), exist_ok=True)
@@ -93,6 +113,10 @@ class BaseExperiment:
             loss = multi_les_loss + binary_les_loss
             loss.backward()
             self.optimizer.step()
+            # New: per-batch scheduler stepping (e.g., OneCycleLR/CyclicLR)
+            if self.scheduler and self.scheduler_step_on == "batch":
+                self.scheduler.step()
+
             total_loss_sum += loss.item() * batch_size
             multi_les_loss_sum += multi_les_loss.item() * batch_size
             binary_les_loss_sum += binary_les_loss.item() * batch_size
@@ -168,18 +192,28 @@ class BaseExperiment:
         try:
             for epoch in range(start_epoch, epochs + 1):
                 t0 = time.time()
+                # New: track LR at the start of the epoch (before any epoch-level step)
+                lr_start = self._current_lr()
+
                 train_stats = self.train_epoch(train_loader)
                 val_stats = self.validate_epoch(val_loader)
+
+                # New: step scheduler at the appropriate time
                 if self.scheduler:
-                    # Some schedulers depend on val loss, adjust if necessary
-                    try:
-                        self.scheduler.step(val_stats["val_total_loss"])
-                    except TypeError:
+                    if self.scheduler_step_on == "plateau":
+                        monitor_key = self.scheduler_monitor or "val_total_loss"
+                        metric_value = val_stats.get(monitor_key, val_stats.get("val_total_loss"))
+                        self.scheduler.step(metric_value)
+                    elif self.scheduler_step_on == "epoch":
                         self.scheduler.step()
+                    # 'batch' mode already stepped during train_epoch
+
                 epoch_stats = {
                     "epoch": epoch,
                     **train_stats,
                     **val_stats,
+                    # New: store start and end LR; 'lr' is the current LR after stepping
+                    # "lr_start": lr_start,
                     "lr": self._current_lr(),
                     "time_sec": time.time() - t0,
                 }
@@ -194,15 +228,15 @@ class BaseExperiment:
                 #     is_best=False,
                 # )
                 if improved:
-                    #TODO: Verificar pq o modelo não está sendo salvo
                     self.save_checkpoint(
                         self.best_checkpoint_path,
                         epoch=epoch,
                         best_metric=self.early_stopping.best,
                         is_best=True,
                     )
+                # New: print LR transition so changes are visible
                 print(
-                    f"{'(improved)' if improved else ''}[{epoch}/{epochs}] lr={epoch_stats['lr']:.6f}\n"
+                    f"{'(improved)' if improved else ''}[{epoch}/{epochs}] lr={epoch_stats['lr_start']:.6f}->{epoch_stats['lr']:.6f}\n"
                     f"train_loss={epoch_stats['train_total_loss']:.4f} | train_mult_les_loss={epoch_stats['train_multi_les_loss']:.4f} | train_bin_les_loss={epoch_stats['train_binary_les_loss']:.4f}\n"
                     f"val_loss={epoch_stats['val_total_loss']:.4f} | val_mult_les_loss={epoch_stats['val_multi_les_loss']:.4f} | val_bin_les_loss={epoch_stats['val_binary_les_loss']:.4f}\n"
                     f"train_acc={epoch_stats.get('train_accuracy', float('nan')):.4f} | val_acc={epoch_stats.get('val_accuracy', float('nan')):.4f}\n"
