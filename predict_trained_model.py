@@ -43,6 +43,7 @@ if __name__ == "__main__":
             input_exam_path = os.path.join(args.data_dir, patient, filename)
         
         input_img, input_arr = load_nifti_sitk(input_exam_path, return_numpy=True)
+        input_arr = input_arr.transpose(2, 0, 1)  # Change to (slices, height, width)
         # input_tensor = torch.from_numpy(input_arr).to(torch.float32).to(device).unsqueeze(1)  # Add channel dimensions
         calcium_candidates = input_arr.copy()  # Placeholder if needed for future use
         calcium_candidates[calcium_candidates < 130] = 0  # Example thresholding
