@@ -33,7 +33,7 @@ if __name__ == "__main__":
     error_patients = []
     patients = os.listdir(args.data_dir)
     for patient in tqdm(patients, desc="Processing patients"):
-        print(f'Processing patient: {patient}')
+        # print(f'Processing patient: {patient}')
         # Load patient data
         filename = f'{patient}_gated.nii.gz'
         input_exam_path = os.path.join(args.data_dir, patient, filename)
@@ -42,8 +42,8 @@ if __name__ == "__main__":
             filename = 'non_gated_FakeGated_avg_slices=4.nii.gz'
             input_exam_path = os.path.join(args.data_dir, patient, filename)
         
-        input_img = load_nifti_sitk(input_exam_path, return_numpy=True)
-        input_tensor = torch.from_numpy(input_img).to(torch.float32).to(device)  # Add batch and channel dimensions
+        input_img, input_arr = load_nifti_sitk(input_exam_path, return_numpy=True)
+        input_tensor = torch.from_numpy(input_arr).to(torch.float32).to(device)  # Add batch and channel dimensions
         
         # Make predictions
         binary_preds = []
@@ -78,6 +78,10 @@ if __name__ == "__main__":
         sitk_region = sitk.GetImageFromArray(region_preds.astype(np.uint8))
         sitk_binary = sitk.GetImageFromArray(binary_preds.astype(np.uint8))
         sitk_multi_lesion = sitk.GetImageFromArray(multi_lesion_pred.astype(np.uint8))
+        
+        sitk_region.CopyInformation(input_img)
+        sitk_binary.CopyInformation(input_img)
+        sitk_multi_lesion.CopyInformation(input_img)
         
         sitk.WriteImage(sitk_region, output_region_path)
         sitk.WriteImage(sitk_binary, output_binary_path)
