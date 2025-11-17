@@ -59,7 +59,9 @@ if __name__ == "__main__":
         input_arr[input_arr==-3024]=-2048
         image_norm = (input_arr - Xmin) / (Xmax - Xmin)
 
-        input_tensor = np.concatenate((image_norm, calcium_candidates), axis=0)  # Concatenate as additional channel
+        image_norm = np.expand_dims(image_norm, axis=1)  # (slices, 1, H, W)
+        calcium_candidates = np.expand_dims(calcium_candidates, axis=1)  # (slices, 1, H, W)
+        input_tensor = np.concatenate((image_norm, calcium_candidates), axis=1)  # Concatenate as additional channel
         input_tensor = torch.from_numpy(input_tensor).to(torch.float32).to(device) # (B, 2, H, W)
         print(f'Input tensor shape: {input_tensor.shape}')
         # Make predictions
