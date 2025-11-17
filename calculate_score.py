@@ -155,12 +155,12 @@ if __name__ == '__main__':
     train_roi_data = []
     train_les_data = []
     #! Fake Gated
-    print('Fake Gated Agaston Score Calculation')
     cont = 0
     avg_str = ''
     avg_flag = False if args.avg == 0 else True
     # exclusion_patients = ['179238', '176064', '177222']
     if args.fake_gated:
+        print('Fake Gated Agaston Score Calculation')
         exam_folder = 'Fake_Gated'
         cac_th = args.cac_th
         if avg_flag:

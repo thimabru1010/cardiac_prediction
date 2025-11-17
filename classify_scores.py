@@ -331,27 +331,10 @@ if __name__ == '__main__':
     
     print(f'Lesion - Sensitivity: {lesion_sensitivity}')
     print(f'Lesion - Specificity: {lesion_specificity}')
-    
-    # if max_f1 < f1_score_lesion_gated:
-    #     max_f1 = f1_score_lesion_gated
-    #     max_f1_method = run_name
-    #     max_f1_error = avg_error
-    #     print(f'Max F1 Score: {max_f1}')
-    #     best_filename = args.filename
-    #     best_sensitivity = lesion_sensitivity
-    #     best_specificity = lesion_specificity
-    #     max_acc = acc_lesion_gated
-    #     print(f'Max F1 Accuracy: {max_acc}')
-    #     print(f'Max F1 Avg Error: {max_f1_error}')
 
     print()
     print(f'F1 Score: {f1} - Accuracy: {acc} - Sensitivity: {lesion_sensitivity} - Specificity: {lesion_specificity}')
     
-    # max_acc_method = max_f1_method
-    # Load the best method
-    # filename = best_filename
-    # print(f"Best filename: {filename}")
-    # scores_path = os.path.join(folder_path, filename)
     df = pd.read_csv(scores_path)
     if args.scores0_path is not None:
         df_scores0 = pd.read_csv(args.scores0_path)
