@@ -44,7 +44,7 @@ def main(args):
     patients = os.listdir(data_dir)
     exclusion_patients = []
     for patient in tqdm(patients):
-        patient = '105655'
+        # patient = '105655'
         if patient in exclusion_patients:
             continue
         print('Processing patient: ' + patient)
