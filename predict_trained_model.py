@@ -53,7 +53,7 @@ if __name__ == "__main__":
         region_preds = []
         try:
             for bs in range(0, input_tensor.shape[0], args.batch_size):
-                input_batch = input_tensor[bs:bs + args.batch_size].unsqueeze(1)  # Add channel dimension
+                input_batch = input_tensor[bs:bs + args.batch_size]  # Add channel dimension
                 with torch.no_grad():
                     region_lesions, binary_lesions = model(input_batch)
                     
