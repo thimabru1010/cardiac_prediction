@@ -58,6 +58,7 @@ if __name__ == "__main__":
 
         input_tensor = np.concatenate((image_norm, calcium_candidates), axis=1)  # Concatenate as additional channel
         input_tensor = torch.from_numpy(input_tensor).to(torch.float32).to(device) # (B, 2, H, W)
+        print(f'Input tensor shape: {input_tensor.shape}')
         # Make predictions
         binary_preds = []
         region_preds = []
