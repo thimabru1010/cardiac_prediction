@@ -43,8 +43,11 @@ if __name__ == "__main__":
             input_exam_path = os.path.join(args.data_dir, patient, filename)
         
         input_img, input_arr = load_nifti_sitk(input_exam_path, return_numpy=True)
-        input_tensor = torch.from_numpy(input_arr).to(torch.float32).to(device)  # Add batch and channel dimensions
-        
+        input_tensor = torch.from_numpy(input_arr).to(torch.float32).to(device).unsqueeze(1)  # Add channel dimensions
+        calcium_candidates = input_tensor.clone()  # Placeholder if needed for future use
+        calcium_candidates[calcium_candidates < 130] = 0  # Example thresholding
+        calcium_candidates[calcium_candidates >= 130] = 1
+        input_tensor = torch.cat((input_tensor, calcium_candidates), dim=1)  # Concatenate as additional channel
         # Make predictions
         binary_preds = []
         region_preds = []
