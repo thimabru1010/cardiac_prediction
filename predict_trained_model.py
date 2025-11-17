@@ -44,10 +44,12 @@ if __name__ == "__main__":
         
         input_img, input_arr = load_nifti_sitk(input_exam_path, return_numpy=True)
         input_arr = input_arr.transpose(2, 0, 1)  # Change to (slices, height, width)
+        print(f'Input array shape: {input_arr.shape}')
         # input_tensor = torch.from_numpy(input_arr).to(torch.float32).to(device).unsqueeze(1)  # Add channel dimensions
         calcium_candidates = input_arr.copy()  # Placeholder if needed for future use
         calcium_candidates[calcium_candidates < 130] = 0  # Example thresholding
         calcium_candidates[calcium_candidates >= 130] = 1
+        print(f'Calcium candidates shape: {calcium_candidates.shape}')
         # Clip image data
         input_arr = np.clip(input_arr, -2048, 5000)
         
