@@ -71,9 +71,9 @@ if __name__ == "__main__":
         multi_lesion_pred = region_preds * binary_preds
         # Save predictions with sitk
         basename = filename.split('.')[0]
-        output_region_path = os.path.join(args.output_dir, f'{basename}_region_pred.nii.gz')
-        output_binary_path = os.path.join(args.output_dir, f'{basename}_binary_pred.nii.gz')
-        output_multi_lesion_path = os.path.join(args.output_dir, f'{basename}_multi_lesion_pred.nii.gz')
+        output_region_path = os.path.join(args.output_dir, f'{basename}_region_lesion_trained_model.nii.gz')
+        output_binary_path = os.path.join(args.output_dir, f'{basename}_binary_lesion_trained_model.nii.gz')
+        output_multi_lesion_path = os.path.join(args.output_dir, f'{basename}_multi_lesion_trained_model.nii.gz')
         
         sitk_region = sitk.GetImageFromArray(region_preds.astype(np.uint8))
         sitk_binary = sitk.GetImageFromArray(binary_preds.astype(np.uint8))
