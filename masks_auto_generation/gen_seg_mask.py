@@ -31,7 +31,7 @@ except ImportError:
     from .remove_text_from_image import remove_text_from_image
     print("import fallback: remove_text_from_image")
 
-import google.generativeai as genai # type: ignore
+# import google.generativeai as genai # type: ignore
 from PIL import Image
 from openai import OpenAI
 import re
@@ -43,14 +43,14 @@ except ImportError:
 
 # --- Configuração da API Key ---
 # RECOMENDADO: Use uma variável de ambiente chamada GOOGLE_API_KEY
-try:
-    api_key = "AIzaSyDZfAbiG6zTY49udgvsd56GvkmmEowEEm8"
-    genai.configure(api_key=api_key)
-    print("API Key configurada via variável de ambiente GOOGLE_API_KEY.")
-except KeyError:
-    print("ERRO: A variável de ambiente GOOGLE_API_KEY não está definida.")
-    print("Por favor, defina GOOGLE_API_KEY com sua chave API.")
-    exit() # Saia se a chave não estiver configurada
+# try:
+#     api_key = "AIzaSyDZfAbiG6zTY49udgvsd56GvkmmEowEEm8"
+#     genai.configure(api_key=api_key)
+#     print("API Key configurada via variável de ambiente GOOGLE_API_KEY.")
+# except KeyError:
+#     print("ERRO: A variável de ambiente GOOGLE_API_KEY não está definida.")
+#     print("Por favor, defina GOOGLE_API_KEY com sua chave API.")
+#     exit() # Saia se a chave não estiver configurada
     
 def align_mask_to_ct(
         mask_img: np.ndarray,
