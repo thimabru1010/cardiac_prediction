@@ -258,14 +258,16 @@ if __name__ == '__main__':
         for patient in tqdm(patients):
             print(patient)
             try:
-                gated_exam_basename = get_basename(os.listdir(f'{root_path}/{patient}'), exclude_files, keywords_cardiac)
-                gated_exam_basename = gated_exam_basename.split('.nii.gz')[0]
-                print(gated_exam_basename)
-                gated_exam_path = f'{root_path}/{patient}/{gated_exam_basename}.nii.gz'
+                    # gated_exam_basename = get_basename(os.listdir(f'{root_path}/{patient}'), exclude_files, keywords_cardiac)
+                    # gated_exam_basename = gated_exam_basename.split('.nii.gz')[0]
+                    # print(gated_exam_basename)
+                    # gated_exam_path = f'{root_path}/{patient}/{gated_exam_basename}.nii.gz'
+                gated_basename = f'{patient}_gated'
+                gated_exam_path = os.path.join(root_path, patient, f'{gated_basename}.nii.gz')
                 if args.trained_model:
-                    gated_mask_les_path = f'{root_path}/{patient}/{gated_exam_basename}_multi_lesion_trained_model.nii.gz'
+                    gated_mask_les_path = f'{root_path}/{patient}/{gated_basename}_multi_lesion_trained_model.nii.gz'
                 else:
-                    gated_mask_les_path = f'{root_path}/{patient}/{gated_exam_basename}_multi_lesion.nii.gz'
+                    gated_mask_les_path = f'{root_path}/{patient}/{gated_basename}_multi_lesion.nii.gz'
                 # gated_heart_mask_path = f'{root_path}/{patient}/{patient}/cardiac_IncreasedMask.nii.gz'
                 
                 gated_exam_img = nib.load(gated_exam_path)
