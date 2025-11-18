@@ -41,33 +41,33 @@ if __name__ == "__main__":
             print('Inferring Fake Gated exam for patient')
             filename = 'non_gated_FakeGated_avg_slices=4.nii.gz'
             input_exam_path = os.path.join(args.data_dir, patient, filename)
-        
-        input_img, input_arr = load_nifti_sitk(input_exam_path, return_numpy=True)
-        input_arr = input_arr.transpose(2, 0, 1)  # Change to (slices, height, width)
-        print(f'Input array shape: {input_arr.shape}')
-        # input_tensor = torch.from_numpy(input_arr).to(torch.float32).to(device).unsqueeze(1)  # Add channel dimensions
-        calcium_candidates = input_arr.copy()  # Placeholder if needed for future use
-        calcium_candidates[calcium_candidates < 130] = 0  # Example thresholding
-        calcium_candidates[calcium_candidates >= 130] = 1
-        print(f'Calcium candidates shape: {calcium_candidates.shape}')
-        # Clip image data
-        input_arr = np.clip(input_arr, -2048, 5000)
-        
-        # Normalize image data
-        Xmin = -2000
-        Xmax = 1300
-        input_arr[input_arr==-3024]=-2048
-        image_norm = (input_arr - Xmin) / (Xmax - Xmin)
-
-        image_norm = np.expand_dims(image_norm, axis=1)  # (slices, 1, H, W)
-        calcium_candidates = np.expand_dims(calcium_candidates, axis=1)  # (slices, 1, H, W)
-        input_tensor = np.concatenate((image_norm, calcium_candidates), axis=1)  # Concatenate as additional channel
-        input_tensor = torch.from_numpy(input_tensor).to(torch.float32).to(device) # (B, 2, H, W)
-        print(f'Input tensor shape: {input_tensor.shape}')
-        # Make predictions
-        binary_preds = []
-        region_preds = []
         try:
+            input_img, input_arr = load_nifti_sitk(input_exam_path, return_numpy=True)
+            input_arr = input_arr.transpose(2, 0, 1)  # Change to (slices, height, width)
+            print(f'Input array shape: {input_arr.shape}')
+            # input_tensor = torch.from_numpy(input_arr).to(torch.float32).to(device).unsqueeze(1)  # Add channel dimensions
+            calcium_candidates = input_arr.copy()  # Placeholder if needed for future use
+            calcium_candidates[calcium_candidates < 130] = 0  # Example thresholding
+            calcium_candidates[calcium_candidates >= 130] = 1
+            print(f'Calcium candidates shape: {calcium_candidates.shape}')
+            # Clip image data
+            input_arr = np.clip(input_arr, -2048, 5000)
+            
+            # Normalize image data
+            Xmin = -2000
+            Xmax = 1300
+            input_arr[input_arr==-3024]=-2048
+            image_norm = (input_arr - Xmin) / (Xmax - Xmin)
+
+            image_norm = np.expand_dims(image_norm, axis=1)  # (slices, 1, H, W)
+            calcium_candidates = np.expand_dims(calcium_candidates, axis=1)  # (slices, 1, H, W)
+            input_tensor = np.concatenate((image_norm, calcium_candidates), axis=1)  # Concatenate as additional channel
+            input_tensor = torch.from_numpy(input_tensor).to(torch.float32).to(device) # (B, 2, H, W)
+            print(f'Input tensor shape: {input_tensor.shape}')
+            # Make predictions
+            binary_preds = []
+            region_preds = []
+        
             for bs in range(0, input_tensor.shape[0], args.batch_size):
                 input_batch = input_tensor[bs:bs + args.batch_size]  # Add channel dimension
                 with torch.no_grad():
