@@ -9,14 +9,14 @@ import cv2
 import numpy as np
 # --- Configuração da API Key ---
 # RECOMENDADO: Use uma variável de ambiente chamada GOOGLE_API_KEY
-try:
-    api_key = "AIzaSyBrPHg64ZYQaiQmTw5oCvy9luZ8bvQTDHE"
-    genai.configure(api_key=api_key)
-    print("API Key configurada via variável de ambiente GOOGLE_API_KEY.")
-except KeyError:
-    print("ERRO: A variável de ambiente GOOGLE_API_KEY não está definida.")
-    print("Por favor, defina GOOGLE_API_KEY com sua chave API.")
-    exit() # Saia se a chave não estiver configurada
+# try:
+#     api_key = "AIzaSyBrPHg64ZYQaiQmTw5oCvy9luZ8bvQTDHE"
+#     genai.configure(api_key=api_key)
+#     print("API Key configurada via variável de ambiente GOOGLE_API_KEY.")
+# except KeyError:
+#     print("ERRO: A variável de ambiente GOOGLE_API_KEY não está definida.")
+#     print("Por favor, defina GOOGLE_API_KEY com sua chave API.")
+#     exit() # Saia se a chave não estiver configurada
 
 def encode_npy_image_png(npy_array):
     _, buffer = cv2.imencode('.png', npy_array)  # Sem perda de qualidade
