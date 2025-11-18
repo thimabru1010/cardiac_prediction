@@ -83,7 +83,7 @@ if __name__ == "__main__":
                     binary_preds.append(binary_lesions.detach().cpu().numpy())
         except Exception as e:
             print(f"Error processing patient {patient}: {e}")
-            error_patients.append(patient)
+            error_patients.append((patient, str(e)))
             continue
         region_preds = np.concatenate(region_preds, axis=0)
         binary_preds = np.concatenate(binary_preds, axis=0)
@@ -109,5 +109,5 @@ if __name__ == "__main__":
     print("Processing completed.")
     if error_patients:
         print("Patients with errors during processing:")
-        for patient in error_patients:
-            print(f"- {patient}")
+        for patient, error_msg in error_patients:
+            print(f"- {patient}: {error_msg}")
