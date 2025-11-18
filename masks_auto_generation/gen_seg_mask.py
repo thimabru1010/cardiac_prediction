@@ -7,6 +7,7 @@ from scipy.ndimage import zoom, affine_transform
 from skimage.registration import phase_cross_correlation
 from scipy.ndimage import shift  # or use cv2.warpAffine for integer shift
 import os
+# import argparse
 # from masks_auto_generation.extract_text_from_image import extract_text_from_image
 # from masks_auto_generation.remove_text_from_image import remove_text_from_image
 
@@ -30,7 +31,10 @@ import google.generativeai as genai # type: ignore
 from PIL import Image
 from openai import OpenAI
 import re
-from masks_auto_generation.utils import plot_masks_and_exams_overlay, hue_mask, plot_compare_alignment, plot_lesion_classes, convert_rgb_to_binary_mask
+try:
+    from masks_auto_generation.utils import plot_masks_and_exams_overlay, hue_mask, plot_compare_alignment, plot_lesion_classes, convert_rgb_to_binary_mask
+except ImportError:
+    from utils import plot_masks_and_exams_overlay, hue_mask, plot_compare_alignment, plot_lesion_classes, convert_rgb_to_binary_mask
 # from utils import plot_masks_and_exams_overlay, hue_mask, plot_compare_alignment, plot_lesion_classes, convert_rgb_to_binary_mask
 
 # --- Configuração da API Key ---

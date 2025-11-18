@@ -21,10 +21,20 @@ class MTALModel():
         self.params['lr'] = 0.005
         self.params['device'] = device
 
-    def create(self):
+    def create(self, c_pos=4, hidden_dim=32):
         """
         Create model
         """
+        class SlicePositionalEncodingMLP(nn.Module):
+            def __init__(self, c_pos=4, hidden_dim=32):
+                super().__init__()
+                self.c_pos = c_pos
+                self.mlp = nn.Sequential(
+                    nn.Linear(1, hidden_dim),
+                    nn.ReLU(inplace=True),
+                    nn.Linear(hidden_dim, c_pos)
+                )
+            
         class Conv_down(nn.Module):
             def __init__(self, in_ch, out_ch):
                 super(Conv_down, self).__init__()
@@ -71,7 +81,7 @@ class MTALModel():
                 return x
             
         class MTAL(nn.Module):
-            def __init__(self):
+            def __init__(self, c_pos=0, hidden_dim=32):
                 super(MTAL, self).__init__()
 
                 #self.conv_down1 = Conv_down(props['Input_size'][2], 64)
@@ -106,7 +116,7 @@ class MTALModel():
                 # self.conv_up7_class  = Conv_up(32+16, 16)
                 # self.conv_up8_class  = Conv_up(16+16+2, 32)
                 
-                self.conv00 = nn.Conv2d(2, 16, kernel_size=5, padding=2, stride=1)
+                self.conv00 = nn.Conv2d(2 + c_pos, 16, kernel_size=5, padding=2, stride=1)
                 self.relu00 = nn.LeakyReLU(0.2)
                 self.conv01 = nn.Conv2d(16, 16, kernel_size=5, padding=2, stride=1)
                 self.relu01 = nn.LeakyReLU(0.2)
@@ -126,10 +136,20 @@ class MTALModel():
 
                 self.dropout0 = nn.Dropout(p=0.5)
                 
+                self.pos_encoding = SlicePositionalEncodingMLP(c_pos=c_pos, hidden_dim=hidden_dim)
+                
 
-            def forward(self, x):
+            def forward(self, x, slice_pos=None):
+                
+                if slice_pos is not None:
+                    B, C, H, W = x.shape
+                    pos_map = self.pos_encoding(slice_pos, (H, W))  # (B, c_pos, H, W)
+                    x_in = torch.cat([x, pos_map], dim=1)           # (B, 2 + c_pos, H, W)
+                else:
+                    x_in = x
+        
                 # print(x.shape)
-                x00 = self.conv00(x)
+                x00 = self.conv00(x_in)
                 x00r = self.relu00(x00)
                 x01 = self.conv01(x00r)
                 x01r = self.relu01(x01)
@@ -178,7 +198,7 @@ class MTALModel():
                 return Y_region, Y_lesion
 
         # Create model
-        mtal = MTAL()
+        mtal = MTAL(c_pos=4, hidden_dim=32)
         mtal.train()
         if self.params['device']=='cuda':
             mtal.cuda() 

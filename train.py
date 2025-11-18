@@ -1,3 +1,4 @@
+from marshmallow import missing
 import torch
 import numpy as np
 from torch import nn, optim
@@ -27,6 +28,9 @@ if __name__ == "__main__":
     parser.add_argument("--loss", type=str, default="ce", choices=["ce", "focal"], help="Tipo de função de perda.")
     parser.add_argument("--focal_gamma", type=float, default=2.0, help="Valor de gamma para Focal Loss (se usada).")
     parser.add_argument("--focal_alpha", type=float, default=0.25, help="Valor de alpha para Focal Loss (se usada).")
+    parser.add_argument("--c_pos", type=int, default=0, help="Número de canais de posição para o positional embedding MLP.")
+    parser.add_argument("--hidden_dim", type=int, default=32, help="Dimensão oculta para o positional embedding MLP.")
+    # parser.add_argument("--pos_emb", action="store_true", help="Usa embeddings posicionais para slices.")
     args = parser.parse_args()
 
     exp_dir = os.path.join("data/experiments", args.exp_name)
@@ -65,8 +69,24 @@ if __name__ == "__main__":
 
     # Initialize model
     model = MTALModel(device=device)
-    model.create()
-    model.load("MTAL_CACS/model/model.pt")
+    model.create(c_pos=args.c_pos, hidden_dim=args.hidden_dim)
+    # model.load("MTAL_CACS/model/model.pt")
+    print("Using positional embeddings for slices.")
+    model.create(c_pos=args.c_pos, hidden_dim=args.hidden_dim)
+    missing, unexpected = model.mtal.load_state_dict(torch.load("MTAL_CACS/model/model.pt"), strict=False)
+    
+    print("Camadas não carregadas (novo modelo):", missing)
+    print("Pesos inesperados (do checkpoint antigo):", unexpected)
+    # if args.pos_emb:
+    #     print("Using positional embeddings for slices.")
+    #     model.create(c_pos=args.c_pos, hidden_dim=args.hidden_dim)
+    #     missing, unexpected = model.mtal.load_state_dict(torch.load("MTAL_CACS/model/model.pt"), strict=False)
+        
+    #     print("Camadas não carregadas (novo modelo):", missing)
+    #     print("Pesos inesperados (do checkpoint antigo):", unexpected)
+    # else:
+    #     print("Not using positional embeddings for slices.")
+    #     model.load("MTAL_CACS/model/model.pt")
 
     # Initialize optimizer
     optimizer = optim.Adam(model.mtal.parameters(), lr=args.learning_rate)
@@ -96,7 +116,7 @@ if __name__ == "__main__":
         "mIoU": miou,
     }
     
-        # Configuração do Early Stopping
+    # Configuração do Early Stopping
     early_cfg = EarlyStoppingConfig(
         patience=10,      # para parar após 10 épocas sem melhora
         min_delta=0.001, # melhora mínima
@@ -114,7 +134,9 @@ if __name__ == "__main__":
         scheduler=scheduler,
         metrics=metrics,
         early_stopping=early_cfg,
-        experiment_dir=exp_dir
+        experiment_dir=exp_dir,
+        c_pos=args.c_pos,
+        hidden_dim=args.hidden_dim
     )
 
     # Start training

@@ -127,6 +127,9 @@ class CardiacNIFTIDataset(Dataset):
 
     def __getitem__(self, idx: int) -> Dict[str, Any]:
         image_path, label_path, sample_id = self.samples[idx]
+        slice_number = int(sample_id.split('_')[-1].split('-')[0])[-3:]  # Últimos 3 caracteres representam o número do slice
+        max_slice = int(sample_id.split('-')[-1])  # Últimos 3 caracteres representam o número máximo de slices
+        slice_pos = slice_number / max_slice
         # print(image_path, label_path, sample_id)
         image_tensor = self._load_npy(image_path)
         # Clip and normalize
@@ -164,6 +167,7 @@ class CardiacNIFTIDataset(Dataset):
             "multi_lesions": label_tensor,
             'binary_lesions': binary_lesions,
             "id": sample_id,
+            "slice_pos": slice_pos
         }
         
         # print(image_tensor.dtype, label_tensor.dtype)

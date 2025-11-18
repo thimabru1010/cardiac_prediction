@@ -95,6 +95,8 @@ if __name__ == "__main__":
         ct_np = sitk.GetArrayFromImage(ct_img)
         print("Mask image shape:", mask_np.shape)
         print("CT image shape:", ct_np.shape)
+        max_slice = ct_np.shape[0]
+        print("Max slices:", max_slice)
         
         calc_candidates2 = ct_np.copy()
         calc_candidates2[ct_np < 130] = 0
@@ -123,7 +125,8 @@ if __name__ == "__main__":
             mask_slice, _ = remove_text_from_image(mask_slice)  # Remove text from mask
             
             print(f"Slice position: {slice_position}")
-            ct_slice = ct_np[slice_position-1]  #! O indice 0 é o final da série
+            slice_position = slice_position - 1  # Convert to 0-based index
+            ct_slice = ct_np[slice_position]
             ct_slice = window_level(ct_slice)       # Use first slice, apply window/level
             print(ct_slice.shape, ct_slice.min(), ct_slice.max())
             print(mask_slice.shape, mask_slice.min(), mask_slice.max())
@@ -201,15 +204,15 @@ if __name__ == "__main__":
                 if uv > 10:
                     print(f"Warning: value {uv} greater than 10 found in calc_mask for patient {patient}, slice {slice_position}. This is unexpected.")
                     sys.exit(1)
-            slice_positions.append(slice_position-1)
+            slice_positions.append(slice_position)
             calc_masks.append(calc_mask)
             ct_exams.append(ct_slice)
             
             os.makedirs(os.path.join(root_output, patient), exist_ok=True)
             os.makedirs(os.path.join(root_output2, patient), exist_ok=True)
             # Save the cropped and aligned mask slice and ct_slice as numpy arrays
-            np.save(os.path.join(root_output2, patient, f"{patient}_slice{slice_position:03d}_mask.npy"), calc_mask)
-            np.save(os.path.join(root_output2, patient, f"{patient}_slice{slice_position:03d}_ct.npy"), ct_slice)
+            np.save(os.path.join(root_output2, patient, f"{patient}_slice{slice_position:03d}-{max_slice:03d}_mask.npy"), calc_mask)
+            np.save(os.path.join(root_output2, patient, f"{patient}_slice{slice_position:03d}-{max_slice:03d}_ct.npy"), ct_slice)
 
         # Save the mask slice in NIFTI format
         slice_positions = np.array(slice_positions)

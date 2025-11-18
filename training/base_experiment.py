@@ -60,6 +60,8 @@ class BaseExperiment:
         # New: control how/when the scheduler steps
         scheduler_step_on: Optional[str] = None,  # 'batch' | 'epoch' | 'plateau'
         scheduler_monitor: Optional[str] = None,  # metric key for 'plateau'
+        c_pos: int = 0,
+        hidden_dim: int = 32,
     ):
         self.model = model.mtal.to(device)
         self.optimizer = optimizer
@@ -71,6 +73,8 @@ class BaseExperiment:
         self.early_stopping = EarlyStopper(
             early_stopping if early_stopping else EarlyStoppingConfig()
         )
+        self.c_pos = c_pos
+        self.hidden_dim = hidden_dim
         # New: store scheduler stepping behavior and auto-detect when possible
         self.scheduler_step_on = scheduler_step_on
         self.scheduler_monitor = scheduler_monitor or (
@@ -103,9 +107,12 @@ class BaseExperiment:
         multi_les_loss_sum = 0.0
         binary_les_loss_sum = 0.0
         for batch in tqdm(dataloader, desc="Training"):
-            inputs, multi_les_targets, binary_les_targets = self._unpack_batch(batch)
+            inputs, multi_les_targets, binary_les_targets, slice_pos = self._unpack_batch(batch)
             self.optimizer.zero_grad()
-            y_region, y_lesion = self.model(inputs)
+            if self.c_pos > 0:
+                y_region, y_lesion = self.model(inputs, slice_pos)
+            else:
+                y_region, y_lesion = self.model(inputs)
             multi_les_loss = self.multi_les_criterion(y_region, multi_les_targets)
             binary_les_loss = self.bin_les_criterion(y_lesion, binary_les_targets)
             batch_size = inputs.size(0)
@@ -149,12 +156,15 @@ class BaseExperiment:
         binary_les_loss_sum = 0.0
         with torch.no_grad():
             for batch in tqdm(dataloader, desc="Validation"):
-                inputs, multi_les_targets, binary_les_targets = self._unpack_batch(batch)
-                y_region, y_lesion = self.model(inputs)
+                inputs, multi_les_targets, binary_les_targets, slice_pos = self._unpack_batch(batch)
+                if self.c_pos > 0:
+                    y_region, y_lesion = self.model(inputs, slice_pos)
+                else:
+                    y_region, y_lesion = self.model(inputs)
+                    
                 multi_les_loss = self.multi_les_criterion(y_region, multi_les_targets)
                 binary_les_loss = self.bin_les_criterion(y_lesion, binary_les_targets)
                 batch_size = inputs.size(0)
-                
                 
                 loss = multi_les_loss + binary_les_loss
                 total_loss_sum += loss.item() * batch_size
@@ -308,11 +318,14 @@ class BaseExperiment:
             inputs = batch["image"]
             multi_les_targets = batch["multi_lesions"]
             binary_les_targets = batch["binary_lesions"]
+            slice_pos = batch['slice_pos']
         else:
-            inputs, multi_les_targets, binary_les_targets = batch
+            inputs, multi_les_targets, binary_les_targets, slice_pos = batch
         return inputs.to(self.device, non_blocking=True), multi_les_targets.to(
             self.device, non_blocking=True
-        ), binary_les_targets.to(self.device, non_blocking=True)
+        ), binary_les_targets.to(self.device, non_blocking=True), slice_pos.to(
+            self.device, non_blocking=True
+        )
 
     def load_best(self):
         if os.path.isfile(self.best_checkpoint_path):
