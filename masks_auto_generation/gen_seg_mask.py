@@ -15,6 +15,8 @@ try:
     from masks_auto_generation.extract_text_from_image import extract_text_from_image
     print("import via package: masks_auto_generation.extract_text_from_image")
 except ImportError:
+    import sys
+    sys.path.append(os.path.join(os.path.dirname(__file__), "masks_auto_generation"))
     from extract_text_from_image import extract_text_from_image
     print("import fallback: extract_text_from_image")
     
@@ -24,6 +26,8 @@ try:
     from masks_auto_generation.remove_text_from_image import remove_text_from_image
     print("import via package: masks_auto_generation.remove_text_from_image")
 except ImportError:
+    import sys
+    sys.path.append(os.path.join(os.path.dirname(__file__), "masks_auto_generation"))
     from remove_text_from_image import remove_text_from_image
     print("import fallback: remove_text_from_image")
 

@@ -1,6 +1,6 @@
 import os
 from PIL import Image
-import google.generativeai as genai # type: ignore
+# import google.generativeai as genai # type: ignore
 from openai import OpenAI
 import json
 import re
