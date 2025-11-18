@@ -133,6 +133,7 @@ if __name__ == '__main__':
     argparser.add_argument('--avg', type=int, default=4, help='Number of slices to average')
     argparser.add_argument('--cac_th', type=int, default=130, help='Calcification Threshold in HU')
     argparser.add_argument('--scores0', action='store_true', help='Use only if you are processing scores 0 exams')
+    argparser.add_argument('--trained_model', action='store_true', help='Use only if you are processing exams from trained model')
     args = argparser.parse_args()
     
     root_path = args.root_path
@@ -180,10 +181,14 @@ if __name__ == '__main__':
             try:
                 print(partes_moles_basename)
                 fg_exam_path = f'{root_path}/{patient}/{partes_moles_basename}.nii.gz'
-                fg_mask_les_path = f'{root_path}/{patient}/{partes_moles_basename}_multi_lesion.nii.gz'
-                roi_coronaries_path = f'{root_path}/{patient}/{partes_moles_basename}_multi_label.nii.gz'
                 fg_heart_mask_path = f'{root_path}/{patient}/{partes_moles_heart_filename}'
                 fg_bones_mask_path = f'{root_path}/{patient}/{partes_moles_bones_filename}'
+                if args.trained_model:
+                    fg_mask_les_path = f'{root_path}/{patient}/{partes_moles_basename}_multi_lesion_trained_model.nii.gz'
+                    roi_coronaries_path = f'{root_path}/{patient}/{partes_moles_basename}_region_label_trained_model.nii.gz'
+                else:
+                    fg_mask_les_path = f'{root_path}/{patient}/{partes_moles_basename}_multi_lesion.nii.gz'
+                    roi_coronaries_path = f'{root_path}/{patient}/{partes_moles_basename}_multi_label.nii.gz'
 
                 fg_exam_img = nib.load(fg_exam_path)#.get_fdata()
                 
@@ -257,7 +262,10 @@ if __name__ == '__main__':
                 gated_exam_basename = gated_exam_basename.split('.nii.gz')[0]
                 print(gated_exam_basename)
                 gated_exam_path = f'{root_path}/{patient}/{gated_exam_basename}.nii.gz'
-                gated_mask_les_path = f'{root_path}/{patient}/{gated_exam_basename}_multi_lesion.nii.gz'
+                if args.trained_model:
+                    gated_mask_les_path = f'{root_path}/{patient}/{gated_exam_basename}_multi_lesion_trained_model.nii.gz'
+                else:
+                    gated_mask_les_path = f'{root_path}/{patient}/{gated_exam_basename}_multi_lesion.nii.gz'
                 # gated_heart_mask_path = f'{root_path}/{patient}/{patient}/cardiac_IncreasedMask.nii.gz'
                 
                 gated_exam_img = nib.load(gated_exam_path)
@@ -329,12 +337,15 @@ if __name__ == '__main__':
         os.makedirs(cac_estimations_path)
 
     if args.scores0:
-        df.to_csv(os.path.join(cac_estimations_path, f'calcium_score_estimations_scores0.csv'), index=False)
+        csv_filename = f'calcium_score_estimations_scores0.csv'
     else:
         if args.dilate:
-            df.to_csv(os.path.join(cac_estimations_path, f'calcium_score_estimations_dilate_it={args.dilate_it}_dilate_k={args.dilate_kernel}_{avg_str}.csv'), index=False)
+            csv_filename = f'calcium_score_estimations_dilate_it={args.dilate_it}_dilate_k={args.dilate_kernel}_{avg_str}.csv'
         else:
-            df.to_csv(os.path.join(cac_estimations_path, f'calcium_score_estimations_{avg_str}.csv'), index=False)
+            csv_filename = f'calcium_score_estimations_{avg_str}.csv'
+    if args.trained_model:
+        csv_filename = csv_filename.replace('.csv', '_trained_model.csv')
+    df.to_csv(os.path.join(cac_estimations_path, csv_filename), index=False)
 
     
     

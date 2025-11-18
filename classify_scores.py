@@ -226,24 +226,10 @@ if __name__ == '__main__':
     avg_str = 'avg=4' if args.avg4 else 'All Slices'
     print(avg_str)
     exam_type = 'Fake_Gated' if args.fake_gated else 'Gated'
-    # if exam_type == 'Fake_Gated':
-    #     folder_path = os.path.join(args.folder_path, exam_type, avg_str, args.threshold)
-    # else:
-    #     avg_str = ''
-    #     folder_path = os.path.join(args.folder_path, exam_type, args.threshold)
         
     if exam_type == 'Gated':
         avg_str = ''
-    # files = os.listdir(folder_path)
     threshold = args.threshold
-    # max_f1 = 0
-    # max_acc = 0
-    # max_f1_error = 0
-    # max_f1_method = ''
-    # max_acc_method = ''
-    # best_filename = ''
-    # metrics = []
-    # print(files)
     exp_root_path = f'data/Experiments_Metrics/{exam_type}/{avg_str}/{threshold}/clssf_mode={args.clssf_mode}/{args.output_folder}'
     if not os.path.exists(exp_root_path):
         os.makedirs(exp_root_path)
@@ -256,18 +242,6 @@ if __name__ == '__main__':
     print(f"Processing file: {args.filename}")
     # scores_path = args.scores_path
     scores_path = os.path.join(args.filename)
-
-    # dilate_it = None
-    # dilate_k = None
-    # exp_name = "Experiment No Dilation"
-    # run_name = "No Dilation"
-    # if 'dilate' in scores_path:
-    #     dilate_it = get_integers_from_string(scores_path, 'dilate_it=')
-    #     dilate_k = get_integers_from_string(scores_path, 'dilate_k=')
-    #     print(dilate_it, dilate_k)
-            
-    #     exp_name = f"Experiment dilated it={dilate_it} k={dilate_k}"
-    #     run_name = f"dilated it={dilate_it} k={dilate_k}"
         
     df = pd.read_csv(scores_path)
     if args.scores0_path is not None:
@@ -287,26 +261,16 @@ if __name__ == '__main__':
     # print(df['Lesion'].values)
     df['Label'] = df['Escore'].apply(lambda x: classify(x, args.clssf_mode))
     df['Lesion Clssf'] = df['Lesion'].apply(lambda x: classify(x, args.clssf_mode))
-    # df['Heart Clssf'] = df['Heart Mask'].apply(lambda x: classify(x, args.clssf_mode))
-    # df['Cor. ROI'] = df['Cor. ROI'].apply(lambda x: classify(x, args.clssf_mode))
 
     acc = (df['Label'] == df['Lesion Clssf']).sum() / len(df)
-    # acc_heart_gated = (df['Label'] == df['Heart Clssf']).sum() / len(df)
-    # acc_cor_roi_gated = (df['Label'] == df['Cor. ROI']).sum() / len(df)
-    # print("DEBUG")
-    # print(df['Lesion Clssf'].values)
     f1 = f1_score(df['Label'].values, df['Lesion Clssf'].values, average='weighted')
     # f1_score_heart_gated = f1_score(df['Label'].values, df['Heart Clssf'].values, average='weighted')
     # f1_score_cor_roi_gated = f1_score(df['Label'].values, df['Cor. ROI'].values, average='weighted')
     avg_error = df['Lesion Error'].mean()
     
     print(f'Accuracy Lesion: {acc}')
-    # print(f'Accuracy Heart: {acc_heart_gated}')
-    # print(f'Accuracy Cor. ROI: {acc_cor_roi_gated}')
     print('-'*50)
     print(f'F1 Score Lesion: {f1}')
-    # print(f'F1 Score Heart: {f1_score_heart_gated}')
-    # print(f'F1 Score Cor. ROI: {f1_score_cor_roi_gated}')
     print()
     print(f'Avg Lesion Error: {avg_error}')    
     
@@ -378,51 +342,3 @@ if __name__ == '__main__':
     df_metrics['Specificity_Class_1'] = lesion_specificity[1]
     df_metrics['Specificity_Class_2'] = lesion_specificity[2]
     df_metrics.to_csv(os.path.join(exp_root_path, 'classification_metrics.csv'), index=False)
-    #! Plot ACC
-    # df_metrics = pd.DataFrame(metrics, columns=['Accuracy', 'F1 Score', 'Error'])
-    # # Define a color palette
-    # palette = sns.color_palette("husl", len(df_metrics))
-    # fig = plt.figure(figsize=(9,6))
-    # ax = sns.barplot(x='Method', y='Accuracy', data=df_metrics, palette=palette, hue='Method', legend=False)
-    # plt.title(f'{exam_type} {avg_str} - Accuracy Metrics')
-    # plt.xticks(rotation=45)
-    # plt.tight_layout()
-    # # Make the best method bold on the x-axis
-    # for label in ax.get_xticklabels():
-    #     if label.get_text() == max_acc_method:
-    #         label.set_fontweight('bold')
-    # plt.savefig(os.path.join(exp_root_path, 'accuracy_metrics.png'), dpi=300)
-    # if args.show_plots:
-    #     plt.show()
-    # plt.close()
-    
-    #! Plot F1 Score
-    # fig = plt.figure(figsize=(9,6))
-    # ax = sns.barplot(x='Method', y='F1 Score', data=df_metrics, palette=palette, hue='Method', legend=False)
-    # plt.title(f'{exam_type} {avg_str} - F1 Score Metrics')
-    # plt.xticks(rotation=45)
-    # plt.tight_layout()
-    # # Make the best method bold on the x-axis
-    # for label in ax.get_xticklabels():
-    #     if label.get_text() == max_f1_method:
-    #         label.set_fontweight('bold')     
-    # plt.savefig(os.path.join(exp_root_path, 'f1_metrics.png'), dpi=300)
-    # if args.show_plots:
-    #     plt.show()
-    # plt.close()
-    
-    #! Plot Avg Error
-    # # Plot the average error per method in a barplot
-    # fig = plt.figure(figsize=(9,6))
-    # ax = sns.barplot(x='Method', y='Error', data=df_metrics, palette=palette, hue='Method', legend=False)
-    # plt.title(f'{exam_type} {avg_str} - Average Error Metrics')
-    # plt.xticks(rotation=45)
-    # plt.tight_layout()
-    # # Make the best method bold on the x-axis
-    # for label in ax.get_xticklabels():
-    #     if label.get_text() == max_f1_method:
-    #         label.set_fontweight('bold')
-    # plt.savefig(os.path.join(exp_root_path, 'error_metrics.png'), dpi=300)
-    # if args.show_plots:
-    #     plt.show()
-    # plt.close()
