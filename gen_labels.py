@@ -9,7 +9,7 @@ from scipy.ndimage import shift  # or use cv2.warpAffine for integer shift
 import os
 # from masks_auto_generation.extract_text_from_image import extract_text_from_image
 from masks_auto_generation.remove_text_from_image import remove_text_from_image
-import google.generativeai as genai # type: ignore
+# import google.generativeai as genai # type: ignore
 from PIL import Image
 import re
 from tqdm import tqdm
