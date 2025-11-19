@@ -34,6 +34,25 @@ class MTALModel():
                     nn.ReLU(inplace=True),
                     nn.Linear(hidden_dim, c_pos)
                 )
+            def forward(self, slice_pos, spatial_size):
+                """
+                slice_pos: tensor (B,) com posição contínua em [0, 1] (por ex: z_normalizado)
+                spatial_size: (H, W) da imagem
+                """
+                B = slice_pos.size(0)
+                H, W = spatial_size
+
+                # (B,) -> (B,1)
+                z = slice_pos.view(B, 1)
+                e = self.mlp(z)                # (B, c_pos)
+
+                # vira (B, c_pos, 1, 1)
+                e = e.view(B, self.c_pos, 1, 1)
+
+                # expand "repete logicamente" para (B, c_pos, H, W), sem copiar memória
+                e = e.expand(B, self.c_pos, H, W)
+
+                return e  # (B, c_pos, H, W)
             
         class Conv_down(nn.Module):
             def __init__(self, in_ch, out_ch):
