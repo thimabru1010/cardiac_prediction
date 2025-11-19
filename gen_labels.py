@@ -83,7 +83,7 @@ if __name__ == "__main__":
     print(f"Patients already processed: {len(patients_processed)}")
     print(f"Patients to process: {len(patients)}")
     
-    client = OpenAI()
+    # client = OpenAI()
     # Load IA.dcm images and generates mask labels from it
     for patient in tqdm(patients):
         # patient = '313073'  #! For debugging only
