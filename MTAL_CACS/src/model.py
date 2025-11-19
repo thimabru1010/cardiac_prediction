@@ -180,12 +180,12 @@ class MTALModel():
 
             def forward(self, x, slice_pos=None):
                 
-                # if slice_pos is not None:
-                #     B, C, H, W = x.shape
-                #     pos_map = self.pos_encoding(slice_pos, (H, W))  # (B, c_pos, H, W)
-                #     x_in = torch.cat([x, pos_map], dim=1)           # (B, 2 + c_pos, H, W)
-                # else:
-                x_in = x
+                if slice_pos is not None:
+                    B, C, H, W = x.shape
+                    pos_map = self.pos_encoding(slice_pos, (H, W))  # (B, c_pos, H, W)
+                    x_in = torch.cat([x, pos_map], dim=1)           # (B, 2 + c_pos, H, W)
+                else:
+                    x_in = x
         
                 # print(x.shape)
                 x00 = self.conv00(x_in)
@@ -230,7 +230,7 @@ class MTALModel():
                 # print(x1.shape)
                 
                 x8d_pos_map = self.pos_encoding(slice_pos, (x8d.shape[2], x8d.shape[3]))
-                x8d = x8d + x8d_pos_map
+                # x8d = x8d + x8d_pos_map
                 
                 # print(x8d.shape, x7.shape)
                 # Decoder 1 - 4 coronaries
