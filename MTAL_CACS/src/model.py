@@ -155,7 +155,7 @@ class MTALModel():
                 # self.conv_up7_class  = Conv_up(32+16, 16)
                 # self.conv_up8_class  = Conv_up(16+16+2, 32)
                 
-                self.conv00 = nn.Conv2d(2 + c_pos, 16, kernel_size=5, padding=2, stride=1)
+                self.conv00 = nn.Conv2d(2, 16, kernel_size=5, padding=2, stride=1)
                 self.relu00 = nn.LeakyReLU(0.2)
                 self.conv01 = nn.Conv2d(16, 16, kernel_size=5, padding=2, stride=1)
                 self.relu01 = nn.LeakyReLU(0.2)
