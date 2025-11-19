@@ -195,39 +195,42 @@ class MTALModel():
                 # print(x01r.shape)
                 
                 x1 = self.conv_down1(x01r)
-                x1_pos_map = self.pos_encoding(slice_pos, (x1.shape[2], x1.shape[3]))
-                x1 = x1 + x1_pos_map
+                # x1_pos_map = self.pos_encoding(slice_pos, (x1.shape[2], x1.shape[3]))
+                # x1 = x1 + x1_pos_map
                 
                 x2 = self.conv_down2(x1)
-                x2_pos_map = self.pos_encoding(slice_pos, (x2.shape[2], x2.shape[3]))
-                x2 = x2 + x2_pos_map
+                # x2_pos_map = self.pos_encoding(slice_pos, (x2.shape[2], x2.shape[3]))
+                # x2 = x2 + x2_pos_map
                 
                 x3 = self.conv_down3(x2)
-                x3_pos_map = self.pos_encoding(slice_pos, (x3.shape[2], x3.shape[3]))
-                x3 = x3 + x3_pos_map
+                # x3_pos_map = self.pos_encoding(slice_pos, (x3.shape[2], x3.shape[3]))
+                # x3 = x3 + x3_pos_map
                 
                 x4 = self.conv_down4(x3)
-                x4_pos_map = self.pos_encoding(slice_pos, (x4.shape[2], x4.shape[3]))
-                x4 = x4 + x4_pos_map
+                # x4_pos_map = self.pos_encoding(slice_pos, (x4.shape[2], x4.shape[3]))
+                # x4 = x4 + x4_pos_map
                 
                 x5 = self.conv_down5(x4)
-                x5_pos_map = self.pos_encoding(slice_pos, (x5.shape[2], x5.shape[3]))
-                x5 = x5 + x5_pos_map
+                # x5_pos_map = self.pos_encoding(slice_pos, (x5.shape[2], x5.shape[3]))
+                # x5 = x5 + x5_pos_map
                 
                 x6 = self.conv_down6(x5)
-                x6_pos_map = self.pos_encoding(slice_pos, (x6.shape[2], x6.shape[3]))
-                x6 = x6 + x6_pos_map
+                # x6_pos_map = self.pos_encoding(slice_pos, (x6.shape[2], x6.shape[3]))
+                # x6 = x6 + x6_pos_map
                 
                 x7 = self.conv_down7(x6)
-                x7_pos_map = self.pos_encoding(slice_pos, (x7.shape[2], x7.shape[3]))
-                x7 = x7 + x7_pos_map
+                # x7_pos_map = self.pos_encoding(slice_pos, (x7.shape[2], x7.shape[3]))
+                # x7 = x7 + x7_pos_map
                 
                 x8 = self.conv_down8(x7)
-                x8_pos_map = self.pos_encoding(slice_pos, (x8.shape[2], x8.shape[3]))
-                x8 = x8 + x8_pos_map
+                # x8_pos_map = self.pos_encoding(slice_pos, (x8.shape[2], x8.shape[3]))
+                # x8 = x8 + x8_pos_map
                 
                 x8d = self.dropout0(x8)
                 # print(x1.shape)
+                
+                x8d_pos_map = self.pos_encoding(slice_pos, (x8d.shape[2], x8d.shape[3]))
+                x8d = x8d + x8d_pos_map
                 
                 # print(x8d.shape, x7.shape)
                 # Decoder 1 - 4 coronaries
