@@ -73,7 +73,20 @@ if __name__ == "__main__":
     # model.load("MTAL_CACS/model/model.pt")
     print("Using positional embeddings for slices.")
     model.create(c_pos=args.c_pos, hidden_dim=args.hidden_dim)
-    missing, unexpected = model.mtal.load_state_dict(torch.load("MTAL_CACS/model/model.pt"), strict=False)
+    
+    # Removes mismatched layers when loading pretrained weights. The removed layers are initialized randomly like a new layer.
+    ckpt = torch.load("MTAL_CACS/model/model.pt")  # ou cpu
+    state_dict = ckpt if isinstance(ckpt, dict) and "model_state" not in ckpt else ckpt["model_state"]
+
+    model_state = model.mtal.state_dict()
+
+    # remove parâmetros com shape diferente
+    for k in list(state_dict.keys()):
+        if k in model_state and state_dict[k].shape != model_state[k].shape:
+            print(f"[AVISO] Removendo {k} do checkpoint: shape {state_dict[k].shape} != {model_state[k].shape}")
+            del state_dict[k]
+            
+    missing, unexpected = model.mtal.load_state_dict(state_dict, strict=False)
     
     print("Camadas não carregadas (novo modelo):", missing)
     print("Pesos inesperados (do checkpoint antigo):", unexpected)
