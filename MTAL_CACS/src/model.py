@@ -198,7 +198,7 @@ class MTALModel():
                 return Y_region, Y_lesion
 
         # Create model
-        mtal = MTAL(c_pos=4, hidden_dim=32)
+        mtal = MTAL(c_pos=c_pos, hidden_dim=hidden_dim)
         mtal.train()
         if self.params['device']=='cuda':
             mtal.cuda() 
