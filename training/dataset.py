@@ -130,7 +130,7 @@ class CardiacNIFTIDataset(Dataset):
         # print(sample_id.split('_')[-1].split('-')[0])
         slice_number = int(sample_id.split('_')[-1].split('-')[0][-3:]) # Últimos 3 caracteres representam o número do slice
         max_slice = int(sample_id.split('-')[-1])  # Últimos 3 caracteres representam o número máximo de slices
-        slice_pos = slice_number / max_slice
+        slice_pos = torch.Tensor([slice_number / max_slice]).to(torch.float32)
         # print(image_path, label_path, sample_id)
         image_tensor = self._load_npy(image_path)
         # Clip and normalize
