@@ -127,7 +127,8 @@ class CardiacNIFTIDataset(Dataset):
 
     def __getitem__(self, idx: int) -> Dict[str, Any]:
         image_path, label_path, sample_id = self.samples[idx]
-        slice_number = int(sample_id.split('_')[-1].split('-')[0])[-3:]  # Últimos 3 caracteres representam o número do slice
+        print(sample_id.split('_')[-1].split('-')[0])
+        slice_number = int(sample_id.split('_')[-1].split('-')[0]) # Últimos 3 caracteres representam o número do slice
         max_slice = int(sample_id.split('-')[-1])  # Últimos 3 caracteres representam o número máximo de slices
         slice_pos = slice_number / max_slice
         # print(image_path, label_path, sample_id)
