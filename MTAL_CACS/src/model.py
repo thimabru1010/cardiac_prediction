@@ -25,8 +25,28 @@ class MTALModel():
         """
         Create model
         """
+        class SlicePositionalEncodingEmbedding(nn.Module):
+            def __init__(self, c_pos=1, max_slices=512):
+                super().__init__()
+                self.c_pos = c_pos
+                self.embedding = nn.Embedding(max_slices, c_pos)
+
+            def forward(self, slice_idx, spatial_size):
+                """
+                slice_idx: (B,) long tensor com índice do slice (0 .. max_slices-1)
+                spatial_size: (H, W)
+                """
+                B = slice_idx.size(0)
+                H, W = spatial_size
+
+                e = self.embedding(slice_idx)      # (B, c_pos)
+                e = e.view(B, self.c_pos, 1, 1)    # (B, c_pos, 1, 1)
+                e = e.expand(B, self.c_pos, H, W)  # (B, c_pos, H, W)
+
+                return e
+    
         class SlicePositionalEncodingMLP(nn.Module):
-            def __init__(self, c_pos=4, hidden_dim=32):
+            def __init__(self, c_pos=1, hidden_dim=32):
                 super().__init__()
                 self.c_pos = c_pos
                 self.mlp = nn.Sequential(
@@ -160,12 +180,12 @@ class MTALModel():
 
             def forward(self, x, slice_pos=None):
                 
-                if slice_pos is not None:
-                    B, C, H, W = x.shape
-                    pos_map = self.pos_encoding(slice_pos, (H, W))  # (B, c_pos, H, W)
-                    x_in = torch.cat([x, pos_map], dim=1)           # (B, 2 + c_pos, H, W)
-                else:
-                    x_in = x
+                # if slice_pos is not None:
+                #     B, C, H, W = x.shape
+                #     pos_map = self.pos_encoding(slice_pos, (H, W))  # (B, c_pos, H, W)
+                #     x_in = torch.cat([x, pos_map], dim=1)           # (B, 2 + c_pos, H, W)
+                # else:
+                x_in = x
         
                 # print(x.shape)
                 x00 = self.conv00(x_in)
@@ -175,13 +195,37 @@ class MTALModel():
                 # print(x01r.shape)
                 
                 x1 = self.conv_down1(x01r)
+                x1_pos_map = self.pos_encoding(slice_pos, (x1.shape[2], x1.shape[3]))
+                x1 = x1 + x1_pos_map
+                
                 x2 = self.conv_down2(x1)
+                x2_pos_map = self.pos_encoding(slice_pos, (x2.shape[2], x2.shape[3]))
+                x2 = x2 + x2_pos_map
+                
                 x3 = self.conv_down3(x2)
+                x3_pos_map = self.pos_encoding(slice_pos, (x3.shape[2], x3.shape[3]))
+                x3 = x3 + x3_pos_map
+                
                 x4 = self.conv_down4(x3)
+                x4_pos_map = self.pos_encoding(slice_pos, (x4.shape[2], x4.shape[3]))
+                x4 = x4 + x4_pos_map
+                
                 x5 = self.conv_down5(x4)
+                x5_pos_map = self.pos_encoding(slice_pos, (x5.shape[2], x5.shape[3]))
+                x5 = x5 + x5_pos_map
+                
                 x6 = self.conv_down6(x5)
+                x6_pos_map = self.pos_encoding(slice_pos, (x6.shape[2], x6.shape[3]))
+                x6 = x6 + x6_pos_map
+                
                 x7 = self.conv_down7(x6)
+                x7_pos_map = self.pos_encoding(slice_pos, (x7.shape[2], x7.shape[3]))
+                x7 = x7 + x7_pos_map
+                
                 x8 = self.conv_down8(x7)
+                x8_pos_map = self.pos_encoding(slice_pos, (x8.shape[2], x8.shape[3]))
+                x8 = x8 + x8_pos_map
+                
                 x8d = self.dropout0(x8)
                 # print(x1.shape)
                 
