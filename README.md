@@ -1,4 +1,4 @@
-# chest CT CAC score estimate
+# Chest CT CAC score estimate
 
 This repository aim to estimate the CAC score of a chest CT non-gated exam.
 
@@ -91,8 +91,9 @@ A folder called `Calcium_Score_Estimations` will be created and a csv with estim
 Now we're going to calculate some metrics and make some plots to evaluate the estimated scores.
 
 ```
-python classify_scores.py --folder_path [Calcium Score Estimations folder] --fake_gated [WHETHER OR NOT] --avg4 [TO INFER THE AVERAGED EXAM OF FAKE GATED] --show_plots [IF U WANT TO SHOW]
+python classify_scores.py --filename [CSV path with the scores] --fake_gated [WHETHER OR NOT] --avg4 [TO INFER THE AVERAGED EXAM OF FAKE GATED] --show_plots [IF U WANT TO SHOW] --output_folder [Folder name inside Experiment Metrics folder]
 ```
+The output folder is the name of the folder inside the following path `exp_root_path = f'data/Experiments_Metrics/{exam_type}/{avg_str}/{threshold}/clssf_mode={args.clssf_mode}/{args.output_folder}`.
 
 The results of this script will be saved inside `Experiments_Metrics`. A confusion matrix will be created along with bland altman and linear correlation plot. Metrics will be displayed inside terminal.
 
